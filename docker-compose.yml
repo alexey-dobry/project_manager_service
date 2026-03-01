@@ -1,0 +1,170 @@
+# student-pm — система управления проектами для студенческих групп.
+# Поднимает: 3 PostgreSQL (по одному на сервис), 3 backend-сервиса, 1 gateway.
+
+services:
+  # ===================== databases =====================
+  auth-postgres:
+    image: postgres:15-alpine
+    container_name: student-pm-auth-postgres
+    environment:
+      POSTGRES_USER: auth
+      POSTGRES_PASSWORD: auth
+      POSTGRES_DB: auth
+    ports:
+      - "5433:5432"
+    volumes:
+      - auth-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth -d auth"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [backend]
+
+  groups-postgres:
+    image: postgres:15-alpine
+    container_name: student-pm-groups-postgres
+    environment:
+      POSTGRES_USER: groups
+      POSTGRES_PASSWORD: groups
+      POSTGRES_DB: groups
+    ports:
+      - "5434:5432"
+    volumes:
+      - groups-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U groups -d groups"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [backend]
+
+  projects-postgres:
+    image: postgres:15-alpine
+    container_name: student-pm-projects-postgres
+    environment:
+      POSTGRES_USER: projects
+      POSTGRES_PASSWORD: projects
+      POSTGRES_DB: projects
+    ports:
+      - "5435:5432"
+    volumes:
+      - projects-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U projects -d projects"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks: [backend]
+
+  # ===================== services =====================
+  auth-service:
+    build:
+      context: ./auth-service
+    container_name: student-pm-auth-service
+    depends_on:
+      auth-postgres:
+        condition: service_healthy
+    environment:
+      APP_ENV: dev
+      HTTP_PORT: 8081
+      POSTGRES_HOST: auth-postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: auth
+      POSTGRES_PASSWORD: auth
+      POSTGRES_DBNAME: auth
+      POSTGRES_SSLMODE: disable
+      JWT_SECRET: ${JWT_SECRET:-change-me-please-32-chars-minimum-secret}
+      JWT_ACCESS_TTL: 15m
+      JWT_REFRESH_TTL: 720h
+      BCRYPT_COST: 10
+      LOGGER_LEVEL: debug
+      LOGGER_FORMAT: json
+    ports:
+      - "8081:8081"
+    networks: [backend]
+    restart: unless-stopped
+
+  groups-service:
+    build:
+      context: ./groups-service
+    container_name: student-pm-groups-service
+    depends_on:
+      groups-postgres:
+        condition: service_healthy
+    environment:
+      APP_ENV: dev
+      HTTP_PORT: 8082
+      POSTGRES_HOST: groups-postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: groups
+      POSTGRES_PASSWORD: groups
+      POSTGRES_DBNAME: groups
+      POSTGRES_SSLMODE: disable
+      JWT_SECRET: ${JWT_SECRET:-change-me-please-32-chars-minimum-secret}
+      LOGGER_LEVEL: debug
+      LOGGER_FORMAT: json
+    ports:
+      - "8082:8082"
+    networks: [backend]
+    restart: unless-stopped
+
+  projects-service:
+    build:
+      context: ./projects-service
+    container_name: student-pm-projects-service
+    depends_on:
+      projects-postgres:
+        condition: service_healthy
+    environment:
+      APP_ENV: dev
+      HTTP_PORT: 8083
+      POSTGRES_HOST: projects-postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: projects
+      POSTGRES_PASSWORD: projects
+      POSTGRES_DBNAME: projects
+      POSTGRES_SSLMODE: disable
+      JWT_SECRET: ${JWT_SECRET:-change-me-please-32-chars-minimum-secret}
+      LOGGER_LEVEL: debug
+      LOGGER_FORMAT: json
+    ports:
+      - "8083:8083"
+    networks: [backend]
+    restart: unless-stopped
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+    container_name: student-pm-api-gateway
+    depends_on:
+      - auth-service
+      - groups-service
+      - projects-service
+    environment:
+      APP_ENV: dev
+      HTTP_PORT: 8080
+      JWT_SECRET: ${JWT_SECRET:-change-me-please-32-chars-minimum-secret}
+      UPSTREAM_AUTH: http://auth-service:8081
+      UPSTREAM_GROUPS: http://groups-service:8082
+      UPSTREAM_PROJECTS: http://projects-service:8083
+      UPSTREAM_TIMEOUT: 15s
+      RATE_LIMIT_MAX: 100
+      RATE_LIMIT_DURATION: 1m
+      CORS_ALLOW_ORIGINS: "*"
+      LOGGER_LEVEL: debug
+      LOGGER_FORMAT: json
+    ports:
+      - "8080:8080"
+    networks: [backend]
+    restart: unless-stopped
+
+# ===================== infra =====================
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  auth-pg-data:
+  groups-pg-data:
+  projects-pg-data:
