@@ -1,0 +1,16 @@
+# env-файлы
+.env
+*/.env
+
+# build artifacts
+*/bin/
+*/tmp/
+*/coverage.out
+
+# IDE
+.idea/
+.vscode/.go.work
+
+# Go
+*.test
+*.out

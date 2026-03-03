@@ -1,0 +1,8 @@
+bin/
+tmp/
+.env
+*.out
+coverage.out
+docs/swagger.yaml.bak
+.idea/
+.vscode/.go.work
