@@ -1,0 +1,301 @@
+{
+  "info": {
+    "_postman_id": "a8b1f0c4-1234-4567-89ab-student-pm-2025",
+    "name": "student-pm",
+    "description": "Коллекция для всей системы. По умолчанию все запросы идут через api-gateway на http://localhost:8080. Логин/регистрация автоматически сохраняют access_token в переменную {{token}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "token", "value": "" },
+    { "key": "refresh_token", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "groupId", "value": "" },
+    { "key": "projectId", "value": "" },
+    { "key": "taskId", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "auth",
+      "item": [
+        {
+          "name": "register (admin)",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@uni.edu\",\n  \"password\": \"secret123\",\n  \"full_name\": \"Admin User\",\n  \"role\": \"admin\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const j = pm.response.json();",
+                  "  pm.collectionVariables.set('token', j.access_token);",
+                  "  pm.collectionVariables.set('refresh_token', j.refresh_token);",
+                  "  pm.collectionVariables.set('userId', j.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "register (student)",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"student@uni.edu\",\n  \"password\": \"secret123\",\n  \"full_name\": \"Иван Иванов\",\n  \"role\": \"student\"\n}"
+            }
+          }
+        },
+        {
+          "name": "login",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@uni.edu\",\n  \"password\": \"secret123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  pm.collectionVariables.set('token', j.access_token);",
+                  "  pm.collectionVariables.set('refresh_token', j.refresh_token);",
+                  "  pm.collectionVariables.set('userId', j.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "refresh",
+          "request": {
+            "method": "POST",
+            "auth": { "type": "noauth" },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/refresh",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const j = pm.response.json();",
+                  "  pm.collectionVariables.set('token', j.access_token);",
+                  "  pm.collectionVariables.set('refresh_token', j.refresh_token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "logout",
+          "request": { "method": "POST", "url": "{{baseUrl}}/auth/logout" }
+        },
+        {
+          "name": "users/me",
+          "request": { "method": "GET", "url": "{{baseUrl}}/users/me" }
+        },
+        {
+          "name": "users/:id",
+          "request": { "method": "GET", "url": "{{baseUrl}}/users/{{userId}}" }
+        }
+      ]
+    },
+    {
+      "name": "groups",
+      "item": [
+        {
+          "name": "create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/groups",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"БПИ-211\",\n  \"course\": 2,\n  \"faculty\": \"ФИТ\",\n  \"leader_id\": \"{{userId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('groupId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        { "name": "list",   "request": { "method": "GET",    "url": "{{baseUrl}}/groups" } },
+        { "name": "get",    "request": { "method": "GET",    "url": "{{baseUrl}}/groups/{{groupId}}" } },
+        { "name": "patch",  "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/groups/{{groupId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"course\": 3\n}" }
+        }},
+        {
+          "name": "members/add",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/groups/{{groupId}}/members",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": \"{{userId}}\",\n  \"role_in_group\": \"member\"\n}"
+            }
+          }
+        },
+        { "name": "members/list",   "request": { "method": "GET", "url": "{{baseUrl}}/groups/{{groupId}}/members" } },
+        { "name": "members/delete", "request": { "method": "DELETE", "url": "{{baseUrl}}/groups/{{groupId}}/members/{{userId}}" } },
+        { "name": "delete", "request": { "method": "DELETE", "url": "{{baseUrl}}/groups/{{groupId}}" } }
+      ]
+    },
+    {
+      "name": "projects",
+      "item": [
+        {
+          "name": "create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/projects",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Курсовая\",\n  \"description\": \"ВКР по микросервисам\",\n  \"group_id\": \"{{groupId}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('projectId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        { "name": "list",  "request": { "method": "GET",    "url": "{{baseUrl}}/projects" } },
+        { "name": "get",   "request": { "method": "GET",    "url": "{{baseUrl}}/projects/{{projectId}}" } },
+        {
+          "name": "patch (status → in_progress)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/projects/{{projectId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"in_progress\"\n}" }
+          }
+        },
+        { "name": "stats", "request": { "method": "GET",    "url": "{{baseUrl}}/projects/{{projectId}}/stats" } },
+        { "name": "delete","request": { "method": "DELETE", "url": "{{baseUrl}}/projects/{{projectId}}" } }
+      ]
+    },
+    {
+      "name": "tasks",
+      "item": [
+        {
+          "name": "create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/projects/{{projectId}}/tasks",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Подготовить план\",\n  \"description\": \"Структура работы\",\n  \"priority\": \"high\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  pm.collectionVariables.set('taskId', pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        { "name": "list",  "request": { "method": "GET", "url": "{{baseUrl}}/projects/{{projectId}}/tasks" } },
+        { "name": "get",   "request": { "method": "GET", "url": "{{baseUrl}}/projects/{{projectId}}/tasks/{{taskId}}" } },
+        {
+          "name": "patch (status → in_progress)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/projects/{{projectId}}/tasks/{{taskId}}",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"in_progress\"\n}" }
+          }
+        },
+        { "name": "delete","request": { "method": "DELETE", "url": "{{baseUrl}}/projects/{{projectId}}/tasks/{{taskId}}" } }
+      ]
+    },
+    {
+      "name": "comments",
+      "item": [
+        {
+          "name": "create",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/tasks/{{taskId}}/comments",
+            "body": { "mode": "raw", "raw": "{\n  \"content\": \"Не успеваем, нужна помощь\"\n}" }
+          }
+        },
+        { "name": "list", "request": { "method": "GET", "url": "{{baseUrl}}/tasks/{{taskId}}/comments" } }
+      ]
+    },
+    {
+      "name": "system",
+      "item": [
+        { "name": "gateway/health",  "request": { "method": "GET", "auth": { "type": "noauth" }, "url": "{{baseUrl}}/health" } },
+        { "name": "auth/health",     "request": { "method": "GET", "auth": { "type": "noauth" }, "url": "http://localhost:8081/health" } },
+        { "name": "groups/health",   "request": { "method": "GET", "auth": { "type": "noauth" }, "url": "http://localhost:8082/health" } },
+        { "name": "projects/health", "request": { "method": "GET", "auth": { "type": "noauth" }, "url": "http://localhost:8083/health" } }
+      ]
+    }
+  ]
+}
