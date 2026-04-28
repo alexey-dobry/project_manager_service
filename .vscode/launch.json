@@ -1,0 +1,95 @@
+{
+  // Отладка в VS Code (Go extension).
+  // Перед F5: docker-compose up -d auth-postgres groups-postgres projects-postgres
+  //
+  // В env подставляем POSTGRES_HOST=localhost и порты, замапленные на хост в compose.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "auth-service",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/auth-service/cmd",
+      "envFile": "${workspaceFolder}/auth-service/.env",
+      "env": {
+        "POSTGRES_HOST": "localhost",
+        "POSTGRES_PORT": "5433",
+        "POSTGRES_USER": "auth",
+        "POSTGRES_PASSWORD": "auth",
+        "POSTGRES_DBNAME": "auth",
+        "HTTP_PORT": "8081",
+        "JWT_SECRET": "change-me-please-32-chars-minimum-secret",
+        "LOGGER_FORMAT": "console"
+      },
+      "cwd": "${workspaceFolder}/auth-service"
+    },
+    {
+      "name": "groups-service",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/groups-service/cmd",
+      "envFile": "${workspaceFolder}/groups-service/.env",
+      "env": {
+        "POSTGRES_HOST": "localhost",
+        "POSTGRES_PORT": "5434",
+        "POSTGRES_USER": "groups",
+        "POSTGRES_PASSWORD": "groups",
+        "POSTGRES_DBNAME": "groups",
+        "HTTP_PORT": "8082",
+        "JWT_SECRET": "change-me-please-32-chars-minimum-secret",
+        "LOGGER_FORMAT": "console"
+      },
+      "cwd": "${workspaceFolder}/groups-service"
+    },
+    {
+      "name": "projects-service",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/projects-service/cmd",
+      "envFile": "${workspaceFolder}/projects-service/.env",
+      "env": {
+        "POSTGRES_HOST": "localhost",
+        "POSTGRES_PORT": "5435",
+        "POSTGRES_USER": "projects",
+        "POSTGRES_PASSWORD": "projects",
+        "POSTGRES_DBNAME": "projects",
+        "HTTP_PORT": "8083",
+        "JWT_SECRET": "change-me-please-32-chars-minimum-secret",
+        "LOGGER_FORMAT": "console"
+      },
+      "cwd": "${workspaceFolder}/projects-service"
+    },
+    {
+      "name": "api-gateway",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/api-gateway/cmd",
+      "envFile": "${workspaceFolder}/api-gateway/.env",
+      "env": {
+        "HTTP_PORT": "8080",
+        "JWT_SECRET": "change-me-please-32-chars-minimum-secret",
+        "UPSTREAM_AUTH": "http://localhost:8081",
+        "UPSTREAM_GROUPS": "http://localhost:8082",
+        "UPSTREAM_PROJECTS": "http://localhost:8083",
+        "LOGGER_FORMAT": "console"
+      },
+      "cwd": "${workspaceFolder}/api-gateway"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "All services",
+      "configurations": [
+        "auth-service",
+        "groups-service",
+        "projects-service",
+        "api-gateway"
+      ],
+      "stopAll": true
+    }
+  ]
+}
