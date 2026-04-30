@@ -1,0 +1,14 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/api-gateway ./cmd"
+  bin = "./tmp/api-gateway"
+  delay = 500
+  exclude_dir = ["bin", "tmp", "tests"]
+  include_ext = ["go"]
+  kill_delay = "1s"
+  send_interrupt = true
+
+[log]
+  time = true
