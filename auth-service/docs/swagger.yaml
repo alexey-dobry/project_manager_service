@@ -1,0 +1,335 @@
+basePath: /
+definitions:
+  github_com_student-pm_auth-service_internal_pkg_errors.Body:
+    properties:
+      error:
+        $ref: '#/definitions/github_com_student-pm_auth-service_internal_pkg_errors.Detail'
+    type: object
+  github_com_student-pm_auth-service_internal_pkg_errors.Detail:
+    properties:
+      code:
+        type: string
+      details:
+        additionalProperties:
+          type: string
+        type: object
+      message:
+        type: string
+    type: object
+  internal_delivery_http.AuthResponse:
+    properties:
+      access_expires_at:
+        type: string
+      access_token:
+        type: string
+      refresh_expires_at:
+        type: string
+      refresh_token:
+        type: string
+      user:
+        $ref: '#/definitions/internal_delivery_http.UserResponse'
+    type: object
+  internal_delivery_http.LoginRequest:
+    properties:
+      email:
+        example: ivanov@uni.edu
+        type: string
+      password:
+        example: Pa$$w0rd123
+        minLength: 1
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  internal_delivery_http.MessageResponse:
+    properties:
+      message:
+        example: ok
+        type: string
+    type: object
+  internal_delivery_http.RefreshRequest:
+    properties:
+      refresh_token:
+        example: AbCdEf...
+        type: string
+    required:
+    - refresh_token
+    type: object
+  internal_delivery_http.RegisterRequest:
+    properties:
+      email:
+        example: ivanov@uni.edu
+        maxLength: 255
+        type: string
+      full_name:
+        example: Иван Иванов
+        maxLength: 120
+        minLength: 2
+        type: string
+      password:
+        example: Pa$$w0rd123
+        maxLength: 72
+        minLength: 8
+        type: string
+      role:
+        enum:
+        - student
+        - group_leader
+        - teacher
+        - admin
+        example: student
+        type: string
+    required:
+    - email
+    - full_name
+    - password
+    - role
+    type: object
+  internal_delivery_http.UpdateUserRequest:
+    properties:
+      full_name:
+        maxLength: 120
+        minLength: 2
+        type: string
+      group_id:
+        type: string
+      role:
+        enum:
+        - student
+        - group_leader
+        - teacher
+        - admin
+        type: string
+    type: object
+  internal_delivery_http.UserResponse:
+    properties:
+      created_at:
+        type: string
+      email:
+        example: ivanov@uni.edu
+        type: string
+      full_name:
+        example: Иван Иванов
+        type: string
+      group_id:
+        type: string
+      id:
+        example: 7c0a...
+        type: string
+      role:
+        example: student
+        type: string
+      updated_at:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Сервис аутентификации и пользователей системы управления студенческими
+    проектами.
+  title: Auth Service API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Email и пароль
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_delivery_http.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.AuthResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_student-pm_auth-service_internal_pkg_errors.Body'
+      summary: Вход
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.MessageResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_student-pm_auth-service_internal_pkg_errors.Body'
+      security:
+      - BearerAuth: []
+      summary: Выход (ревокация всех refresh-токенов)
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Refresh-токен
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_delivery_http.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.AuthResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_student-pm_auth-service_internal_pkg_errors.Body'
+      summary: Обновление токенов
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт пользователя и сразу возвращает access+refresh токены
+      parameters:
+      - description: Данные регистрации
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_delivery_http.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_delivery_http.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_student-pm_auth-service_internal_pkg_errors.Body'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_student-pm_auth-service_internal_pkg_errors.Body'
+      summary: Регистрация пользователя
+      tags:
+      - auth
+  /health:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.MessageResponse'
+      summary: Health-check
+      tags:
+      - system
+  /ready:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.MessageResponse'
+      summary: Readiness-check
+      tags:
+      - system
+  /users/{id}:
+    get:
+      parameters:
+      - description: User UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.UserResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_student-pm_auth-service_internal_pkg_errors.Body'
+      security:
+      - BearerAuth: []
+      summary: Пользователь по ID
+      tags:
+      - users
+    patch:
+      consumes:
+      - application/json
+      description: Менять role может только admin. Обычный пользователь может править
+        только себя.
+      parameters:
+      - description: User UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Поля для обновления
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_delivery_http.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.UserResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_student-pm_auth-service_internal_pkg_errors.Body'
+      security:
+      - BearerAuth: []
+      summary: Обновление пользователя (PATCH)
+      tags:
+      - users
+  /users/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_student-pm_auth-service_internal_pkg_errors.Body'
+      security:
+      - BearerAuth: []
+      summary: Текущий пользователь
+      tags:
+      - users
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
