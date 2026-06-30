@@ -52,7 +52,7 @@ func New(cfg Config) (*Provider, error) {
 	}, nil
 }
 
-// claims — то, что кладём в access-токен.
+// claims — содержимое access-токена.
 type claims struct {
 	Role string `json:"role"`
 	jwt.RegisteredClaims

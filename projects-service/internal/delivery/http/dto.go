@@ -2,7 +2,7 @@ package httpdelivery
 
 import "time"
 
-// ====================== Project ======================
+// Project
 
 type CreateProjectRequest struct {
 	Title       string     `json:"title"        validate:"required,min=2,max=200"`
@@ -11,8 +11,8 @@ type CreateProjectRequest struct {
 	Deadline    *time.Time `json:"deadline,omitempty"`
 }
 
-// UpdateProjectRequest. Чтобы отличить «поле не передано» от «поле = null»
-// для очистки nullable-полей, используется флаг clear_*.
+// UpdateProjectRequest содержит поля для частичного обновления.
+// Флаги Clear* очищают соответствующее nullable-поле.
 type UpdateProjectRequest struct {
 	Title         *string    `json:"title,omitempty"        validate:"omitempty,min=2,max=200"`
 	Description   *string    `json:"description,omitempty"  validate:"omitempty,max=4000"`
@@ -40,7 +40,7 @@ type PaginatedProjects struct {
 	Offset int               `json:"offset"`
 }
 
-// ====================== Task ======================
+// Task
 
 type CreateTaskRequest struct {
 	Title       string     `json:"title"       validate:"required,min=2,max=200"`
@@ -81,7 +81,7 @@ type PaginatedTasks struct {
 	Offset int            `json:"offset"`
 }
 
-// ====================== Comment ======================
+// Comment
 
 type CreateCommentRequest struct {
 	Content string `json:"content" validate:"required,min=1,max=4000"`
@@ -95,7 +95,7 @@ type CommentResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// ====================== Stats ======================
+// Stats
 
 type StatsResponse struct {
 	ProjectID    string         `json:"project_id"`

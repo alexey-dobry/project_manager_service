@@ -39,3 +39,13 @@ swag:
 	swag init -g cmd/main.go -o docs --parseDependency --parseInternal
 docker-build:
 	docker build -t projects-service:local .
+
+# ───── fuzz ─────
+FUZZTIME ?= 30s
+.PHONY: fuzz fuzz-corpus
+fuzz:
+	go test ./internal/domain  -run=- -fuzz=FuzzTaskStateMachine          -fuzztime=$(FUZZTIME)
+	go test ./internal/usecase -run=- -fuzz=FuzzCreateCommentValidation   -fuzztime=$(FUZZTIME)
+fuzz-corpus:
+	go test ./internal/domain  -run=FuzzTaskStateMachine
+	go test ./internal/usecase -run=FuzzCreateCommentValidation

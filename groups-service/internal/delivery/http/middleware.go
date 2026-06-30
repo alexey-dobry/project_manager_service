@@ -50,7 +50,7 @@ func AccessLog(log zerolog.Logger) fiber.Handler {
 	}
 }
 
-// AuthRequired — проверяет JWT, выпущенный auth-service.
+// AuthRequired — middleware проверки Bearer-токена.
 func AuthRequired(v *jwt.Verifier) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		raw := c.Get("Authorization")

@@ -42,11 +42,8 @@ func AccessLog(log zerolog.Logger) fiber.Handler {
 	}
 }
 
-// AuthRequired — pre-validation на gateway.
-// Defense in depth: реальная авторизация всё равно происходит на backend
-// (он сам читает Authorization), но здесь мы:
-//   1) отбрасываем мусорные токены до похода на upstream;
-//   2) кладём user_id/role в Locals — для X-User-ID/X-User-Role хедеров и логов.
+// AuthRequired проверяет подпись и срок Bearer-токена и сохраняет
+// идентификатор пользователя и роль в Locals для проксирования вниз.
 func AuthRequired(v *jwt.Verifier) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		raw := c.Get("Authorization")

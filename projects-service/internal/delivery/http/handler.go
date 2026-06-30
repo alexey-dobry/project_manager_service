@@ -22,7 +22,7 @@ func NewHandler(svc *usecase.Service, v *validator.Validator) *Handler {
 	return &Handler{svc: svc, validator: v}
 }
 
-// actorOr401 — общий путь получения Actor из Locals.
+// actorOr401 извлекает Actor из контекста или возвращает 401-ответ.
 func (h *Handler) actorOr401(c *fiber.Ctx) (usecase.Actor, error) {
 	uid, ok1 := userIDFrom(c)
 	role, ok2 := roleFrom(c)
@@ -40,9 +40,7 @@ func parseUUIDParam(c *fiber.Ctx, name string) (uuid.UUID, error) {
 	return id, nil
 }
 
-// =====================================================================
 // PROJECTS
-// =====================================================================
 
 // CreateProject godoc
 // @Summary      Создать проект
@@ -260,9 +258,7 @@ func (h *Handler) ProjectStats(c *fiber.Ctx) error {
 	return c.JSON(toStatsResponse(stats))
 }
 
-// =====================================================================
 // system
-// =====================================================================
 
 // Health godoc
 // @Summary Health
@@ -284,9 +280,7 @@ func (h *Handler) Ready(c *fiber.Ctx) error {
 	return c.JSON(MessageResponse{Message: "ready"})
 }
 
-// =====================================================================
 // mappers
-// =====================================================================
 
 func toProjectResponse(p *domain.Project) ProjectResponse {
 	return ProjectResponse{

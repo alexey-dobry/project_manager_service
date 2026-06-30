@@ -7,25 +7,15 @@ import (
 	"github.com/student-pm/api-gateway/internal/proxy"
 )
 
-// Upstreams — три proxy, каждое под свой backend-сервис.
+// Upstreams содержит три proxy под backend-сервисы.
 type Upstreams struct {
 	Auth     *proxy.Proxy
 	Groups   *proxy.Proxy
 	Projects *proxy.Proxy
 }
 
-// RegisterRoutes монтирует gateway-маршруты.
-//
-//   Public (без токена):
-//     POST /auth/register, /auth/login, /auth/refresh    → auth-service
-//     GET  /, /health, /ready, /swagger/*                → gateway сам
-//
-//   Protected (Bearer):
-//     /auth/logout, /users/*                             → auth-service
-//     /groups/*                                          → groups-service
-//     /projects/*, /tasks/*                              → projects-service
+// RegisterRoutes регистрирует маршруты gateway и проксирующие маршруты на backend.
 func RegisterRoutes(app *fiber.App, ups Upstreams, v *jwt.Verifier, swagger fiber.Handler) {
-	// gateway own.
 	app.Get("/", root)
 	app.Get("/health", health)
 	app.Get("/ready", health)
@@ -34,30 +24,24 @@ func RegisterRoutes(app *fiber.App, ups Upstreams, v *jwt.Verifier, swagger fibe
 		app.Get("/swagger/*", swagger)
 	}
 
-	// Публичные эндпоинты auth-service.
 	app.Post("/auth/register", ups.Auth.Handler())
 	app.Post("/auth/login", ups.Auth.Handler())
 	app.Post("/auth/refresh", ups.Auth.Handler())
 
 	authMW := AuthRequired(v)
 
-	// auth-service protected
 	app.All("/auth/logout", authMW, ups.Auth.Handler())
 	app.All("/users", authMW, ups.Auth.Handler())
 	app.All("/users/*", authMW, ups.Auth.Handler())
 
-	// groups-service
 	app.All("/groups", authMW, ups.Groups.Handler())
 	app.All("/groups/*", authMW, ups.Groups.Handler())
 
-	// projects-service: /projects/* и /tasks/*
 	app.All("/projects", authMW, ups.Projects.Handler())
 	app.All("/projects/*", authMW, ups.Projects.Handler())
 	app.All("/tasks", authMW, ups.Projects.Handler())
 	app.All("/tasks/*", authMW, ups.Projects.Handler())
 }
-
-// ===== gateway own handlers =====
 
 func root(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{

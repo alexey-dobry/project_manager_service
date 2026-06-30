@@ -100,7 +100,7 @@ func Load() (*Config, error) {
 	}
 
 	if cfg.JWT.Secret == "" {
-		return nil, fmt.Errorf("JWT_SECRET is required (must match auth-service)")
+		return nil, fmt.Errorf("JWT_SECRET is required")
 	}
 	return cfg, nil
 }

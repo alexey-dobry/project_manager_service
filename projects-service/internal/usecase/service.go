@@ -10,8 +10,7 @@ import (
 	"github.com/student-pm/projects-service/internal/domain"
 )
 
-// Service агрегирует use cases трёх связанных сущностей.
-// Они в одном bounded context (проект — корневой агрегат), поэтому объединены.
+// Service содержит сценарии работы с проектами, задачами и комментариями.
 type Service struct {
 	projects ProjectRepository
 	tasks    TaskRepository
@@ -29,12 +28,10 @@ func NewService(
 	return &Service{projects: p, tasks: t, comments: c, now: now}
 }
 
-// ============================================================
 // PROJECTS
-// ============================================================
 
-// CreateProject: любой авторизованный с ролью student/group_leader/teacher/admin
-// может создать проект. owner — actor.
+// CreateProject доступен любому авторизованному пользователю.
+// Владельцем проекта становится инициатор операции.
 func (s *Service) CreateProject(ctx context.Context, actor Actor, in CreateProjectInput) (*domain.Project, error) {
 	now := s.now().UTC()
 	p := &domain.Project{
@@ -127,13 +124,10 @@ func (s *Service) ProjectStats(ctx context.Context, projectID uuid.UUID) (*domai
 	return s.tasks.Stats(ctx, projectID, s.now().UTC())
 }
 
-// ============================================================
 // TASKS
-// ============================================================
 
-// CreateTask: создавать задачи может любой, кто может управлять проектом
-// (owner, teacher, admin). Для курсовой можно расширить до участников группы,
-// но это потребует gRPC-вызова в groups-service — оставляем как TODO.
+// CreateTask: создавать задачи может тот, кто может управлять проектом
+// (owner, teacher, admin).
 func (s *Service) CreateTask(ctx context.Context, actor Actor, projectID uuid.UUID, in CreateTaskInput) (*domain.Task, error) {
 	p, err := s.projects.GetByID(ctx, projectID)
 	if err != nil {
@@ -165,8 +159,7 @@ func (s *Service) CreateTask(ctx context.Context, actor Actor, projectID uuid.UU
 	return t, nil
 }
 
-// GetTask — возвращает задачу с проверкой принадлежности проекту (защита от
-// IDOR-атаки: /projects/X/tasks/Y где Y принадлежит другому проекту).
+// GetTask возвращает задачу с проверкой её принадлежности указанному проекту.
 func (s *Service) GetTask(ctx context.Context, projectID, taskID uuid.UUID) (*domain.Task, error) {
 	t, err := s.tasks.GetByID(ctx, taskID)
 	if err != nil {
@@ -279,13 +272,9 @@ func (s *Service) DeleteTask(ctx context.Context, actor Actor, projectID, taskID
 	return s.tasks.Delete(ctx, taskID)
 }
 
-// ============================================================
 // COMMENTS
-// ============================================================
 
-// CreateComment: писать комментарий может любой авторизованный.
-// (Для курсовой не сужаем до участников группы — это потребовало бы
-// межсервисный вызов в groups-service.)
+// CreateComment: писать комментарий может любой авторизованный пользователь.
 func (s *Service) CreateComment(ctx context.Context, actor Actor, taskID uuid.UUID, in CreateCommentInput) (*domain.Comment, error) {
 	if _, err := s.tasks.GetByID(ctx, taskID); err != nil {
 		return nil, err
@@ -293,6 +282,9 @@ func (s *Service) CreateComment(ctx context.Context, actor Actor, taskID uuid.UU
 	content := strings.TrimSpace(in.Content)
 	if content == "" {
 		return nil, domain.ErrEmptyContent
+	}
+	if len(content) > domain.MaxCommentLength {
+		return nil, domain.ErrContentTooLong
 	}
 	c := &domain.Comment{
 		ID:        uuid.New(),
@@ -329,9 +321,7 @@ func (s *Service) DeleteComment(ctx context.Context, actor Actor, taskID, commen
 	return s.comments.Delete(ctx, commentID)
 }
 
-// ============================================================
 // RBAC helpers
-// ============================================================
 
 // canManageProject — кто может править/удалять проект и его задачи.
 // Owner проекта или глобально привилегированный (teacher/admin).

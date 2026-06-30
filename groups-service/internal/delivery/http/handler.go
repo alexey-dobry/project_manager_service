@@ -21,7 +21,7 @@ func NewHandler(g *usecase.GroupService, v *validator.Validator) *Handler {
 	return &Handler{groups: g, validator: v}
 }
 
-// actorOr401 — общая защёлка для эндпоинтов за AuthRequired.
+// actorOr401 извлекает Actor из контекста или возвращает 401-ответ.
 func (h *Handler) actorOr401(c *fiber.Ctx) (usecase.Actor, error) {
 	uid, ok1 := userIDFrom(c)
 	role, ok2 := roleFrom(c)

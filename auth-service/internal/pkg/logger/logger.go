@@ -9,8 +9,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
-// New собирает zerolog.Logger по уровню и формату.
-// format: "json" (для прода) или "console" (для дев).
+// New собирает zerolog.Logger по уровню и формату ("json" | "console").
 func New(level, format string) zerolog.Logger {
 	zerolog.TimeFieldFormat = time.RFC3339Nano
 

@@ -29,7 +29,7 @@ func (r Role) IsValid() bool {
 type User struct {
 	ID           uuid.UUID  `json:"id"`
 	Email        string     `json:"email"`
-	PasswordHash string     `json:"-"` // никогда не сериализуем наружу
+	PasswordHash string     `json:"-"` // не сериализуется в JSON
 	FullName     string     `json:"full_name"`
 	Role         Role       `json:"role"`
 	GroupID      *uuid.UUID `json:"group_id,omitempty"`

@@ -41,7 +41,6 @@ func run() error {
 		return fmt.Errorf("jwt verifier: %w", err)
 	}
 
-	// Три proxy.
 	authProxy, err := proxy.New(cfg.Upstreams.Auth, cfg.Upstreams.Timeout, log)
 	if err != nil {
 		return fmt.Errorf("auth proxy: %w", err)

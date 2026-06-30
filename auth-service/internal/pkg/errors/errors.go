@@ -9,7 +9,7 @@ import (
 	"github.com/student-pm/auth-service/internal/domain"
 )
 
-// Body — формат ошибки из ТЗ: { "error": { "code": "...", "message": "..." } }.
+// Body — единый формат ошибки HTTP-ответа.
 type Body struct {
 	Error Detail `json:"error"`
 }
@@ -28,8 +28,8 @@ func Send(c *fiber.Ctx, status int, code, msg string, details map[string]string)
 	}})
 }
 
-// FromDomain мапит доменную ошибку в HTTP-ответ.
-// Если ошибка незнакома — 500 с обезличенным сообщением (детали — в логи).
+// FromDomain отображает доменную ошибку в HTTP-ответ.
+// Неизвестные ошибки возвращают 500 с обобщённым сообщением.
 func FromDomain(c *fiber.Ctx, err error) error {
 	switch {
 	case errors.Is(err, domain.ErrUserNotFound):

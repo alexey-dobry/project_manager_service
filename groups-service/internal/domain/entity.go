@@ -6,8 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Role — глобальная роль из JWT (issued by auth-service).
-// Дублируем enum здесь, чтобы не создавать межсервисную зависимость пакетов.
+// Role — глобальная роль пользователя из JWT-claims.
 type Role string
 
 const (
@@ -25,9 +24,8 @@ func (r Role) IsValid() bool {
 	return false
 }
 
-// MembershipRole — роль пользователя ВНУТРИ конкретной группы.
-// Не путать с глобальной Role: в одной группе можно быть leader,
-// в другой — обычным member.
+// MembershipRole — роль пользователя в конкретной группе.
+// Отличается от глобальной Role: для разных групп может быть разной.
 type MembershipRole string
 
 const (
@@ -42,6 +40,15 @@ func (m MembershipRole) IsValid() bool {
 	}
 	return false
 }
+
+// Границы валидных значений курса.
+const (
+	MinCourse = 1
+	MaxCourse = 10
+)
+
+// IsValidCourse сообщает, что курс лежит в допустимом диапазоне.
+func IsValidCourse(c int) bool { return c >= MinCourse && c <= MaxCourse }
 
 // Group — студенческая группа.
 type Group struct {

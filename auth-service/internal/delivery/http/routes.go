@@ -7,9 +7,7 @@ import (
 	"github.com/student-pm/auth-service/internal/usecase"
 )
 
-// RegisterRoutes монтирует все эндпоинты сервиса на app.
-// Sec: публичные — /auth/register, /auth/login, /auth/refresh, /health, /ready, /swagger/*.
-// Остальное — за AuthRequired.
+// RegisterRoutes регистрирует эндпоинты сервиса в Fiber-приложении.
 func RegisterRoutes(app *fiber.App, h *Handler, tp usecase.TokenProvider) {
 	// system
 	app.Get("/health", h.Health)

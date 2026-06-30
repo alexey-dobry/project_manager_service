@@ -15,7 +15,7 @@ import (
 	"github.com/student-pm/projects-service/internal/usecase"
 )
 
-// Repos — фасад над pgx-репозиториями. Один pool на все три репо.
+// Repos — набор pgx-репозиториев над общим пулом подключений.
 type Repos struct {
 	Projects *ProjectRepo
 	Tasks    *TaskRepo
@@ -30,9 +30,7 @@ func NewRepos(pool *pgxpool.Pool) *Repos {
 	}
 }
 
-// =================================================================
 // ProjectRepo
-// =================================================================
 
 type ProjectRepo struct {
 	pool *pgxpool.Pool
@@ -140,9 +138,7 @@ func (r *ProjectRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// =================================================================
 // TaskRepo
-// =================================================================
 
 type TaskRepo struct {
 	pool *pgxpool.Pool
@@ -255,8 +251,8 @@ func (r *TaskRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// Stats — все агрегации одним SQL'ем через FILTER.
-// Здесь же считаем overdue: due_date < now AND status != 'done'.
+// Stats возвращает агрегированную статистику задач проекта.
+// Запрос подсчитывает разбивки по status/priority и число просроченных задач.
 func (r *TaskRepo) Stats(ctx context.Context, projectID uuid.UUID, now time.Time) (*domain.ProjectStats, error) {
 	const q = `
 		SELECT
@@ -309,9 +305,7 @@ func (r *TaskRepo) Stats(ctx context.Context, projectID uuid.UUID, now time.Time
 	}, nil
 }
 
-// =================================================================
 // CommentRepo
-// =================================================================
 
 type CommentRepo struct {
 	pool *pgxpool.Pool

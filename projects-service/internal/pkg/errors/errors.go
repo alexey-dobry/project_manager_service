@@ -43,6 +43,8 @@ func FromDomain(c *fiber.Ctx, err error) error {
 		return Send(c, http.StatusConflict, "invalid_transition", "status transition is not allowed", nil)
 	case errors.Is(err, domain.ErrEmptyContent):
 		return Send(c, http.StatusBadRequest, "empty_content", "comment content cannot be empty", nil)
+	case errors.Is(err, domain.ErrContentTooLong):
+		return Send(c, http.StatusRequestEntityTooLarge, "content_too_long", "comment content is too long", nil)
 	case errors.Is(err, domain.ErrForbidden):
 		return Send(c, http.StatusForbidden, "forbidden", "forbidden", nil)
 	case errors.Is(err, domain.ErrInvalidToken):

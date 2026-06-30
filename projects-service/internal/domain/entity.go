@@ -6,8 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// Role — глобальная роль из JWT auth-service. Дублируется в каждом сервисе,
-// чтобы не было межсервисной зависимости пакетов.
+// Role — глобальная роль пользователя из JWT-claims.
 type Role string
 
 const (
@@ -44,14 +43,13 @@ func (s ProjectStatus) IsValid() bool {
 	return false
 }
 
-// projectTransitions — допустимые переходы статусов проекта.
-// Архив — терминальное состояние (выйти можно, но это будет PATCH с явной волей).
+// projectTransitions описывает допустимые переходы между статусами проекта.
 var projectTransitions = map[ProjectStatus]map[ProjectStatus]bool{
 	ProjectDraft:      {ProjectInProgress: true, ProjectArchived: true},
 	ProjectInProgress: {ProjectReview: true, ProjectArchived: true},
 	ProjectReview:     {ProjectInProgress: true, ProjectCompleted: true, ProjectArchived: true},
 	ProjectCompleted:  {ProjectArchived: true},
-	ProjectArchived:   {ProjectDraft: true}, // расконсервировать в draft
+	ProjectArchived:   {ProjectDraft: true}, // расконсервация
 }
 
 // CanTransitionTo — проверка, что переход разрешён.
@@ -86,7 +84,7 @@ func (s TaskStatus) IsValid() bool {
 var taskTransitions = map[TaskStatus]map[TaskStatus]bool{
 	TaskTodo:       {TaskInProgress: true, TaskBlocked: true},
 	TaskInProgress: {TaskTodo: true, TaskDone: true, TaskBlocked: true},
-	TaskDone:       {TaskInProgress: true}, // переоткрыть
+	TaskDone:       {TaskInProgress: true}, // reopen
 	TaskBlocked:    {TaskTodo: true, TaskInProgress: true},
 }
 

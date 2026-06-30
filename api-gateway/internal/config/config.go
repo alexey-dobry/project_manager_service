@@ -113,7 +113,7 @@ func Load() (*Config, error) {
 	}
 
 	if cfg.JWT.Secret == "" {
-		return nil, fmt.Errorf("JWT_SECRET is required (must match auth-service)")
+		return nil, fmt.Errorf("JWT_SECRET is required")
 	}
 	for k, v := range map[string]string{
 		"upstream.auth": cfg.Upstreams.Auth,

@@ -27,4 +27,6 @@ make down-volumes
 ```bash
 make test   
 make cover
+
+make fuzz
 ```

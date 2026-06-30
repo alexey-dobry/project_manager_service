@@ -39,3 +39,11 @@ swag:
 	swag init -g cmd/main.go -o docs --parseDependency --parseInternal
 docker-build:
 	docker build -t groups-service:local .
+
+# ───── fuzz ─────
+FUZZTIME ?= 30s
+.PHONY: fuzz fuzz-corpus
+fuzz:
+	go test ./internal/usecase -run=- -fuzz=FuzzCreateGroupValidation -fuzztime=$(FUZZTIME)
+fuzz-corpus:
+	go test ./internal/usecase -run=FuzzCreateGroupValidation

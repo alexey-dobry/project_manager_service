@@ -48,12 +48,10 @@ func New(upstream string, timeout time.Duration, log zerolog.Logger) (*Proxy, er
 	rp := httputil.NewSingleHostReverseProxy(u)
 	rp.Transport = transport
 
-	// Фиксируем Director: подменяем хост, оставляем путь и query как есть.
 	origDirector := rp.Director
 	rp.Director = func(req *http.Request) {
 		origDirector(req)
 		req.Host = u.Host
-		// Никаких mutation тела/пути — gateway работает только префиксом.
 	}
 
 	rp.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
@@ -69,13 +67,11 @@ func New(upstream string, timeout time.Duration, log zerolog.Logger) (*Proxy, er
 	return &Proxy{target: u, rp: rp, log: log}, nil
 }
 
-// Handler — Fiber-handler, который проксирует запрос на upstream.
-// Перед прокси добавляет служебные заголовки X-Request-ID, X-User-ID, X-User-Role
-// (если они уже были установлены middleware'ами выше).
+// Handler возвращает Fiber-handler, проксирующий запрос на upstream
+// и пробрасывающий X-Request-ID, X-User-ID, X-User-Role из контекста.
 func (p *Proxy) Handler() fiber.Handler {
 	stdHandler := adaptor.HTTPHandler(p.rp)
 	return func(c *fiber.Ctx) error {
-		// Прокидываем атрибуты, которые удобно иметь сервисам в логах.
 		if id, ok := c.Locals("request_id").(string); ok && id != "" {
 			c.Request().Header.Set("X-Request-ID", id)
 		}
@@ -89,16 +85,13 @@ func (p *Proxy) Handler() fiber.Handler {
 	}
 }
 
-// Mount монтирует группу path → proxy.
-// path — префикс вида "/auth", "/groups", "/projects", "/tasks", "/users".
-// Все методы и подпути идут в upstream без модификации.
+// Mount регистрирует префикс и все его подпути на проксирование.
 func Mount(app *fiber.App, prefix string, p *Proxy) {
 	app.All(prefix, p.Handler())
 	app.All(prefix+"/*", p.Handler())
 }
 
-// MountUnreachable — заглушка на случай, если апстрим не настроен,
-// чтобы клиент получал понятную 502 вместо 404.
+// MountUnreachable монтирует префикс, отвечающий 502 для всех методов.
 func MountUnreachable(app *fiber.App, prefix, reason string) {
 	app.All(prefix, func(c *fiber.Ctx) error { return httperr.BadGateway(c, reason) })
 	app.All(prefix+"/*", func(c *fiber.Ctx) error { return httperr.BadGateway(c, reason) })

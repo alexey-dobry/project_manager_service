@@ -42,5 +42,5 @@ type AuthResult struct {
 type UpdateUserInput struct {
 	FullName *string
 	GroupID  *uuid.UUID
-	Role     *domain.Role // менять может только admin — проверка в handler
+	Role     *domain.Role // RBAC-проверку выполняет вызывающий слой
 }

@@ -74,3 +74,15 @@ docker-build: ## собрать образ
 .PHONY: docker-up
 docker-up: ## docker compose up (из корня монорепо)
 	cd .. && docker-compose up -d auth-postgres auth-service
+
+# ───── fuzz ─────
+FUZZTIME ?= 30s
+.PHONY: fuzz fuzz-corpus
+fuzz: ## native go fuzz (FUZZTIME=30s по умолчанию)
+	go test ./internal/pkg/jwt        -run=- -fuzz=FuzzParseAccessToken  -fuzztime=$(FUZZTIME)
+	go test ./internal/pkg/hasher     -run=- -fuzz=FuzzBcryptCompare     -fuzztime=$(FUZZTIME)
+	go test ./internal/delivery/http  -run=- -fuzz=FuzzRegisterHandler   -fuzztime=$(FUZZTIME)
+fuzz-corpus: ## регрессия по сохранённому corpus, без новых мутаций
+	go test ./internal/pkg/jwt        -run=FuzzParseAccessToken
+	go test ./internal/pkg/hasher     -run=FuzzBcryptCompare
+	go test ./internal/delivery/http  -run=FuzzRegisterHandler

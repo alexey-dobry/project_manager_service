@@ -42,6 +42,10 @@ func FromDomain(c *fiber.Ctx, err error) error {
 	case errors.Is(err, domain.ErrInvalidRole),
 		errors.Is(err, domain.ErrInvalidMembership):
 		return Send(c, http.StatusBadRequest, "invalid_role", "role is not allowed", nil)
+	case errors.Is(err, domain.ErrInvalidCourse):
+		return Send(c, http.StatusBadRequest, "invalid_course", "course must be between 1 and 10", nil)
+	case errors.Is(err, domain.ErrInvalidName):
+		return Send(c, http.StatusBadRequest, "invalid_name", "group name must not be empty", nil)
 	default:
 		return Send(c, http.StatusInternalServerError, "internal_error", "internal server error", nil)
 	}

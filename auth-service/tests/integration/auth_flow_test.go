@@ -24,7 +24,6 @@ import (
 )
 
 // In-process интеграционный тест: реальный Fiber-app + in-memory репозитории.
-// Полноценный e2e на testcontainers-go (реальный Postgres) — заготовка в README.
 
 // ===== in-memory репозитории =====
 

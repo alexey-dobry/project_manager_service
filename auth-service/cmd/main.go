@@ -55,13 +55,11 @@ func run() error {
 	log := logger.New(cfg.Logger.Level, cfg.Logger.Format)
 	log.Info().Str("env", cfg.App.Env).Msg("starting auth-service")
 
-	// 1. Применяем миграции до старта пула.
 	if err := runMigrations(cfg.Postgres.DSN(), "migrations"); err != nil {
 		return fmt.Errorf("migrate: %w", err)
 	}
 	log.Info().Msg("migrations applied")
 
-	// 2. Пул подключений.
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	pool, err := pgxpool.New(ctx, cfg.Postgres.DSN())
@@ -73,7 +71,6 @@ func run() error {
 		return fmt.Errorf("pg ping: %w", err)
 	}
 
-	// 3. DI: репозитории → usecase → handlers.
 	repo := repository.NewPostgresRepo(pool)
 	hash := hasher.New(cfg.Bcrypt.Cost)
 	tp, err := jwtpkg.New(jwtpkg.Config{
@@ -89,13 +86,11 @@ func run() error {
 	v := validator.New()
 	h := httpdelivery.NewHandler(auth, v)
 
-	// 4. Fiber.
 	app := fiber.New(fiber.Config{
 		AppName:      cfg.App.Name,
 		ReadTimeout:  cfg.HTTP.ReadTimeout,
 		WriteTimeout: cfg.HTTP.WriteTimeout,
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
-			// Fallback на случай неперехваченной ошибки.
 			log.Error().Err(err).Str("path", c.Path()).Msg("unhandled error")
 			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 				"error": fiber.Map{"code": "internal_error", "message": "internal server error"},
@@ -109,7 +104,6 @@ func run() error {
 
 	httpdelivery.RegisterRoutes(app, h, tp)
 
-	// 5. Graceful shutdown.
 	addr := cfg.HTTP.Host + ":" + cfg.HTTP.Port
 	srvErr := make(chan error, 1)
 	go func() {
@@ -138,8 +132,7 @@ func run() error {
 	return nil
 }
 
-// runMigrations применяет up-миграции из папки.
-// Если изменений нет (ErrNoChange) — это норма, возвращаем nil.
+// runMigrations применяет up-миграции из указанной папки.
 func runMigrations(dsn, dir string) error {
 	m, err := migrate.New("file://"+dir, dsn)
 	if err != nil {

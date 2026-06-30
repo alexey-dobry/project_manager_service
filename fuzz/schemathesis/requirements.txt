@@ -1,0 +1,9 @@
+# Pinned versions for reproducibility of the fuzz harness described
+# in section "Fuzzing" of the thesis report.
+#
+# Install:
+#   python3 -m venv .venv && source .venv/bin/activate
+#   pip install -r fuzz/schemathesis/requirements.txt
+
+schemathesis==3.36.3
+hypothesis==6.115.6

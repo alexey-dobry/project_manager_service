@@ -46,7 +46,7 @@ func (p PostgresConfig) DSN() string {
 	)
 }
 
-// JWTConfig — только то, что нужно для проверки. Никаких TTL.
+// JWTConfig содержит параметры верификации токенов.
 type JWTConfig struct {
 	Secret string
 }
@@ -109,7 +109,7 @@ func Load() (*Config, error) {
 	}
 
 	if cfg.JWT.Secret == "" {
-		return nil, fmt.Errorf("JWT_SECRET is required (must match auth-service)")
+		return nil, fmt.Errorf("JWT_SECRET is required")
 	}
 	return cfg, nil
 }

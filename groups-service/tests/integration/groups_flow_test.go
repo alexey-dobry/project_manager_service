@@ -25,8 +25,7 @@ import (
 
 const testSecret = "test-secret-test-secret-1234567890"
 
-// ===== тестовый эмулятор auth-service: только выдача токенов =====
-
+// issueAccessToken генерирует валидный access-токен для тестов.
 func issueAccessToken(t *testing.T, userID uuid.UUID, role domain.Role) string {
 	t.Helper()
 	now := time.Now().UTC()
@@ -44,7 +43,6 @@ func issueAccessToken(t *testing.T, userID uuid.UUID, role domain.Role) string {
 	return signed
 }
 
-// ===== in-memory repo =====
 
 type memRepo struct {
 	mu      sync.Mutex
@@ -163,7 +161,6 @@ func (m *memRepo) GetMember(_ context.Context, gID, uID uuid.UUID) (*domain.Memb
 	return &cp, nil
 }
 
-// ===== app builder =====
 
 func buildApp(t *testing.T) *fiber.App {
 	t.Helper()
@@ -201,7 +198,6 @@ func doJSON(t *testing.T, app *fiber.App, method, path, token string, body any) 
 	return resp, data
 }
 
-// ===== сценарий =====
 
 func TestGroupsFlow_AdminCreatesAndManages(t *testing.T) {
 	app := buildApp(t)

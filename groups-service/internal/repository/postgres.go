@@ -61,10 +61,8 @@ func (r *PostgresRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Group
 	return g, nil
 }
 
-// List — пагинированный список с фильтрами. Total отдельно — чтобы клиент мог
-// показать «1–20 из 137».
+// List — пагинированный список с фильтрами. Возвращает (rows, total, err).
 func (r *PostgresRepo) List(ctx context.Context, f usecase.ListFilter) ([]domain.Group, int, error) {
-	// Динамический WHERE собираем безопасно: значения через $N, не через конкатенацию.
 	conds := []string{"1=1"}
 	args := []any{}
 	if f.Faculty != "" {

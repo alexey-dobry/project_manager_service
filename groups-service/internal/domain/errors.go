@@ -11,4 +11,6 @@ var (
 	ErrForbidden           = errors.New("forbidden")
 	ErrInvalidRole         = errors.New("invalid role")
 	ErrInvalidMembership   = errors.New("invalid membership role")
+	ErrInvalidCourse       = errors.New("course must be between 1 and 10")
+	ErrInvalidName         = errors.New("group name must not be empty")
 )

@@ -14,4 +14,8 @@ var (
 	ErrTaskNotInProject   = errors.New("task does not belong to this project")
 	ErrCommentNotInTask   = errors.New("comment does not belong to this task")
 	ErrEmptyContent       = errors.New("comment content cannot be empty")
+	ErrContentTooLong     = errors.New("comment content is too long")
 )
+
+// MaxCommentLength — максимальная длина тела комментария.
+const MaxCommentLength = 10000

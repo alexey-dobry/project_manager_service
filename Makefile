@@ -90,3 +90,40 @@ smoke: ## health-check всех сервисов через gateway
 	@echo "auth:       "      && curl -fs http://localhost:8081/health | head -1
 	@echo "groups:     "      && curl -fs http://localhost:8082/health | head -1
 	@echo "projects:   "      && curl -fs http://localhost:8083/health | head -1
+
+# ───── fuzz ─────
+# Покрывает критику: «нет FuzzXxx, нет corpus, нет make-цели».
+# Два слоя: native Go fuzz (white-box, рядом с кодом) и Schemathesis (black-box).
+
+FUZZTIME ?= 30s
+
+.PHONY: fuzz fuzz-go fuzz-schemathesis fuzz-corpus
+
+fuzz: fuzz-go ## native Go fuzz по всем сервисам (быстрая регрессия, FUZZTIME=30s по умолчанию)
+
+fuzz-go: ## native Go fuzz: запускает все FuzzXxx по очереди
+	@echo "──────── auth-service: FuzzParseAccessToken"
+	cd auth-service && go test ./internal/pkg/jwt -run=- -fuzz=FuzzParseAccessToken -fuzztime=$(FUZZTIME)
+	@echo "──────── auth-service: FuzzBcryptCompare"
+	cd auth-service && go test ./internal/pkg/hasher -run=- -fuzz=FuzzBcryptCompare -fuzztime=$(FUZZTIME)
+	@echo "──────── auth-service: FuzzRegisterHandler"
+	cd auth-service && go test ./internal/delivery/http -run=- -fuzz=FuzzRegisterHandler -fuzztime=$(FUZZTIME)
+	@echo "──────── groups-service: FuzzCreateGroupValidation"
+	cd groups-service && go test ./internal/usecase -run=- -fuzz=FuzzCreateGroupValidation -fuzztime=$(FUZZTIME)
+	@echo "──────── projects-service: FuzzTaskStateMachine"
+	cd projects-service && go test ./internal/domain -run=- -fuzz=FuzzTaskStateMachine -fuzztime=$(FUZZTIME)
+	@echo "──────── projects-service: FuzzCreateCommentValidation"
+	cd projects-service && go test ./internal/usecase -run=- -fuzz=FuzzCreateCommentValidation -fuzztime=$(FUZZTIME)
+	@echo "✓ go fuzz: пройдено за FUZZTIME=$(FUZZTIME) на цель"
+
+fuzz-corpus: ## прогон только по зафиксированному corpus (без новых мутаций, быстро)
+	cd auth-service     && go test ./internal/pkg/jwt    -run=FuzzParseAccessToken
+	cd auth-service     && go test ./internal/pkg/hasher -run=FuzzBcryptCompare
+	cd auth-service     && go test ./internal/delivery/http -run=FuzzRegisterHandler
+	cd groups-service   && go test ./internal/usecase   -run=FuzzCreateGroupValidation
+	cd projects-service && go test ./internal/domain    -run=FuzzTaskStateMachine
+	cd projects-service && go test ./internal/usecase   -run=FuzzCreateCommentValidation
+	@echo "✓ corpus regression: ок"
+
+fuzz-schemathesis: ## black-box fuzz через OpenAPI (требует поднятый docker-compose up)
+	./fuzz/schemathesis/run.sh

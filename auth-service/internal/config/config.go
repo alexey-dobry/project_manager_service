@@ -67,7 +67,7 @@ type LoggerConfig struct {
 
 // Load читает .env (если есть) и переменные окружения.
 func Load() (*Config, error) {
-	_ = godotenv.Load() // отсутствие .env — не ошибка (в проде их и не должно быть)
+	_ = godotenv.Load()
 
 	v := viper.New()
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))

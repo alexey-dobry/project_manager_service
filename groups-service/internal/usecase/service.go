@@ -11,9 +11,7 @@ import (
 	"github.com/student-pm/groups-service/internal/domain"
 )
 
-// GroupService — все use cases домена групп.
-// RBAC живёт здесь, а не в handler: бизнес-правило должно быть
-// независимо от транспортного протокола (REST/gRPC/CLI).
+// GroupService реализует сценарии работы с группами.
 type GroupService struct {
 	repo GroupRepository
 	now  func() time.Time
@@ -58,6 +56,12 @@ func (s *GroupService) Create(ctx context.Context, actor Actor, in CreateGroupIn
 		return nil, domain.ErrForbidden
 	}
 	in.Name = strings.TrimSpace(in.Name)
+	if in.Name == "" {
+		return nil, domain.ErrInvalidName
+	}
+	if !domain.IsValidCourse(in.Course) {
+		return nil, domain.ErrInvalidCourse
+	}
 
 	g := &domain.Group{
 		ID:        uuid.New(),
@@ -73,8 +77,7 @@ func (s *GroupService) Create(ctx context.Context, actor Actor, in CreateGroupIn
 	}
 
 	// Лидер автоматически становится участником группы с ролью leader.
-	// Если AddMember упадёт — это ок: группа уже создана, добавим вручную.
-	// Для атомарности правильнее завернуть в транзакцию (TODO для прода).
+	// Операция не атомарна: при сбое AddMember группа уже создана.
 	leaderMembership := &domain.Membership{
 		UserID:      in.LeaderID,
 		GroupID:     g.ID,
@@ -99,9 +102,16 @@ func (s *GroupService) Update(ctx context.Context, actor Actor, id uuid.UUID, in
 	}
 
 	if in.Name != nil {
-		g.Name = strings.TrimSpace(*in.Name)
+		name := strings.TrimSpace(*in.Name)
+		if name == "" {
+			return nil, domain.ErrInvalidName
+		}
+		g.Name = name
 	}
 	if in.Course != nil {
+		if !domain.IsValidCourse(*in.Course) {
+			return nil, domain.ErrInvalidCourse
+		}
 		g.Course = *in.Course
 	}
 	if in.Faculty != nil {

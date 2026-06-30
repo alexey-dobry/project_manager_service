@@ -11,17 +11,16 @@ import (
 	"github.com/student-pm/auth-service/internal/domain"
 )
 
-// AuthService реализует use cases аутентификации.
-// Зависит ТОЛЬКО от портов — не знает про fiber, pgx, bcrypt напрямую.
+// AuthService реализует сценарии аутентификации, зависит только от портов.
 type AuthService struct {
 	users    UserRepository
 	tokens   RefreshTokenRepository
 	hasher   PasswordHasher
 	jwt      TokenProvider
-	now      func() time.Time // для тестируемости
+	now      func() time.Time
 }
 
-// NewAuthService — конструктор. now=nil → используется time.Now.
+// NewAuthService — конструктор; при now=nil используется time.Now.
 func NewAuthService(
 	u UserRepository,
 	t RefreshTokenRepository,
@@ -131,12 +130,11 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (*AuthRe
 }
 
 // Logout — ревокация всех refresh-токенов пользователя.
-// Альтернатива: ревокация только конкретного токена. Здесь — для простоты, всех.
 func (s *AuthService) Logout(ctx context.Context, userID uuid.UUID) error {
 	return s.tokens.RevokeAllForUser(ctx, userID, s.now().UTC())
 }
 
-// GetMe / GetByID — справочные методы.
+// GetByID возвращает пользователя по идентификатору.
 func (s *AuthService) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	return s.users.GetByID(ctx, id)
 }

@@ -238,7 +238,6 @@ func (h *Handler) Health(c *fiber.Ctx) error {
 // @Success      200 {object} MessageResponse
 // @Router       /ready [get]
 func (h *Handler) Ready(c *fiber.Ctx) error {
-	// Здесь в реальной системе пингуем зависимости (БД и т.п.).
 	return c.JSON(MessageResponse{Message: "ready"})
 }
 

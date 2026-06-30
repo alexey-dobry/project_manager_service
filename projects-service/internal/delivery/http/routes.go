@@ -28,7 +28,7 @@ func RegisterRoutes(app *fiber.App, h *Handler, v *jwt.Verifier) {
 	projects.Patch("/:id/tasks/:task_id", h.UpdateTask)
 	projects.Delete("/:id/tasks/:task_id", h.DeleteTask)
 
-	// comments — на верхнем уровне, как в ТЗ: /tasks/:id/comments
+	// comments
 	tasks := app.Group("/tasks", AuthRequired(v))
 	tasks.Post("/:task_id/comments", h.CreateComment)
 	tasks.Get("/:task_id/comments", h.ListComments)

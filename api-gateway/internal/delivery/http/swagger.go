@@ -4,11 +4,8 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// SwaggerAggregator — простейший Swagger UI на CDN с переключателем
-// между тремя backend-сервисами. Реальные spec-файлы каждый сервис
-// отдаёт сам у себя на /swagger/doc.json (см. swag init).
-//
-// Открывается на http://localhost:8080/swagger/.
+// swaggerHTML — статический Swagger UI с переключателем между сервисами.
+// Spec-файлы отдают сами сервисы по /swagger/doc.json.
 const swaggerHTML = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -66,13 +63,9 @@ const swaggerHTML = `<!DOCTYPE html>
 </body>
 </html>`
 
-// SwaggerHandler — отдаёт HTML; если путь — /swagger/doc.json, проксирует
-// в auth-service для удобства (gateway сам не выпускает spec).
+// SwaggerHandler возвращает Fiber-handler, отдающий HTML Swagger UI.
 func SwaggerHandler() fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		// /swagger/* → /swagger/index.html, doc.json и т.п.
-		// Чтобы не тащить весь UI, отдаём один HTML на любой суб-путь
-		// и пусть JS внутри сам ходит на сервисы.
 		c.Set("Content-Type", "text/html; charset=utf-8")
 		return c.SendString(swaggerHTML)
 	}
