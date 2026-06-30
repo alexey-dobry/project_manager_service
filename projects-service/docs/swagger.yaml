@@ -1,0 +1,671 @@
+basePath: /
+definitions:
+  github_com_student-pm_projects-service_internal_pkg_errors.Body:
+    properties:
+      error:
+        $ref: '#/definitions/github_com_student-pm_projects-service_internal_pkg_errors.Detail'
+    type: object
+  github_com_student-pm_projects-service_internal_pkg_errors.Detail:
+    properties:
+      code:
+        type: string
+      details:
+        additionalProperties:
+          type: string
+        type: object
+      message:
+        type: string
+    type: object
+  internal_delivery_http.CommentResponse:
+    properties:
+      content:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      task_id:
+        type: string
+      user_id:
+        type: string
+    type: object
+  internal_delivery_http.CreateCommentRequest:
+    properties:
+      content:
+        maxLength: 4000
+        minLength: 1
+        type: string
+    required:
+    - content
+    type: object
+  internal_delivery_http.CreateProjectRequest:
+    properties:
+      deadline:
+        type: string
+      description:
+        maxLength: 4000
+        type: string
+      group_id:
+        type: string
+      title:
+        maxLength: 200
+        minLength: 2
+        type: string
+    required:
+    - group_id
+    - title
+    type: object
+  internal_delivery_http.CreateTaskRequest:
+    properties:
+      assignee_id:
+        type: string
+      description:
+        maxLength: 4000
+        type: string
+      due_date:
+        type: string
+      priority:
+        enum:
+        - low
+        - medium
+        - high
+        - critical
+        type: string
+      title:
+        maxLength: 200
+        minLength: 2
+        type: string
+    required:
+    - priority
+    - title
+    type: object
+  internal_delivery_http.MessageResponse:
+    properties:
+      message:
+        example: ok
+        type: string
+    type: object
+  internal_delivery_http.PaginatedProjects:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/internal_delivery_http.ProjectResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+    type: object
+  internal_delivery_http.PaginatedTasks:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/internal_delivery_http.TaskResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+    type: object
+  internal_delivery_http.ProjectResponse:
+    properties:
+      created_at:
+        type: string
+      deadline:
+        type: string
+      description:
+        type: string
+      group_id:
+        type: string
+      id:
+        type: string
+      owner_id:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  internal_delivery_http.StatsResponse:
+    properties:
+      by_priority:
+        additionalProperties:
+          type: integer
+        type: object
+      by_status:
+        additionalProperties:
+          type: integer
+        type: object
+      done_percent:
+        type: number
+      overdue_count:
+        type: integer
+      project_id:
+        type: string
+      total_tasks:
+        type: integer
+    type: object
+  internal_delivery_http.TaskResponse:
+    properties:
+      assignee_id:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      due_date:
+        type: string
+      id:
+        type: string
+      priority:
+        type: string
+      project_id:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  internal_delivery_http.UpdateProjectRequest:
+    properties:
+      clear_deadline:
+        type: boolean
+      deadline:
+        type: string
+      description:
+        maxLength: 4000
+        type: string
+      status:
+        enum:
+        - draft
+        - in_progress
+        - review
+        - completed
+        - archived
+        type: string
+      title:
+        maxLength: 200
+        minLength: 2
+        type: string
+    type: object
+  internal_delivery_http.UpdateTaskRequest:
+    properties:
+      assignee_id:
+        type: string
+      clear_assignee:
+        type: boolean
+      clear_due_date:
+        type: boolean
+      description:
+        maxLength: 4000
+        type: string
+      due_date:
+        type: string
+      priority:
+        enum:
+        - low
+        - medium
+        - high
+        - critical
+        type: string
+      status:
+        enum:
+        - todo
+        - in_progress
+        - done
+        - blocked
+        type: string
+      title:
+        maxLength: 200
+        minLength: 2
+        type: string
+    type: object
+info:
+  contact: {}
+  description: Управление проектами, задачами и комментариями.
+  title: Projects Service API
+  version: "1.0"
+paths:
+  /health:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.MessageResponse'
+      summary: Health
+      tags:
+      - system
+  /projects:
+    get:
+      parameters:
+      - description: UUID группы
+        in: query
+        name: group_id
+        type: string
+      - description: UUID владельца
+        in: query
+        name: owner_id
+        type: string
+      - description: draft|in_progress|review|completed|archived
+        in: query
+        name: status
+        type: string
+      - description: 1..100, default 20
+        in: query
+        name: limit
+        type: integer
+      - description: default 0
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.PaginatedProjects'
+      security:
+      - BearerAuth: []
+      summary: Список проектов
+      tags:
+      - projects
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_delivery_http.CreateProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ProjectResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_student-pm_projects-service_internal_pkg_errors.Body'
+      security:
+      - BearerAuth: []
+      summary: Создать проект
+      tags:
+      - projects
+  /projects/{id}:
+    delete:
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_student-pm_projects-service_internal_pkg_errors.Body'
+      security:
+      - BearerAuth: []
+      summary: Удалить проект
+      tags:
+      - projects
+    get:
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ProjectResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_student-pm_projects-service_internal_pkg_errors.Body'
+      security:
+      - BearerAuth: []
+      summary: Получить проект по ID
+      tags:
+      - projects
+    patch:
+      consumes:
+      - application/json
+      description: Owner проекта или teacher/admin
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Patch payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_delivery_http.UpdateProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.ProjectResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_student-pm_projects-service_internal_pkg_errors.Body'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_student-pm_projects-service_internal_pkg_errors.Body'
+      security:
+      - BearerAuth: []
+      summary: Обновить проект
+      tags:
+      - projects
+  /projects/{id}/stats:
+    get:
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.StatsResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_student-pm_projects-service_internal_pkg_errors.Body'
+      security:
+      - BearerAuth: []
+      summary: Статистика по задачам проекта
+      tags:
+      - projects
+  /projects/{id}/tasks:
+    get:
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: todo|in_progress|done|blocked
+        in: query
+        name: status
+        type: string
+      - description: low|medium|high|critical
+        in: query
+        name: priority
+        type: string
+      - description: UUID исполнителя
+        in: query
+        name: assignee_id
+        type: string
+      - description: 1..100, default 20
+        in: query
+        name: limit
+        type: integer
+      - description: default 0
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.PaginatedTasks'
+      security:
+      - BearerAuth: []
+      summary: Список задач проекта
+      tags:
+      - tasks
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Task payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_delivery_http.CreateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_delivery_http.TaskResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_student-pm_projects-service_internal_pkg_errors.Body'
+      security:
+      - BearerAuth: []
+      summary: Создать задачу в проекте
+      tags:
+      - tasks
+  /projects/{id}/tasks/{task_id}:
+    delete:
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Task UUID
+        in: path
+        name: task_id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_student-pm_projects-service_internal_pkg_errors.Body'
+      security:
+      - BearerAuth: []
+      summary: Удалить задачу
+      tags:
+      - tasks
+    get:
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Task UUID
+        in: path
+        name: task_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.TaskResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_student-pm_projects-service_internal_pkg_errors.Body'
+      security:
+      - BearerAuth: []
+      summary: Получить задачу
+      tags:
+      - tasks
+    patch:
+      consumes:
+      - application/json
+      description: Менеджер проекта (owner/teacher/admin) — все поля. Assignee — только
+        status и description.
+      parameters:
+      - description: Project UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Task UUID
+        in: path
+        name: task_id
+        required: true
+        type: string
+      - description: Patch payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_delivery_http.UpdateTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.TaskResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_student-pm_projects-service_internal_pkg_errors.Body'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_student-pm_projects-service_internal_pkg_errors.Body'
+      security:
+      - BearerAuth: []
+      summary: Обновить задачу
+      tags:
+      - tasks
+  /ready:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_delivery_http.MessageResponse'
+      summary: Ready
+      tags:
+      - system
+  /tasks/{task_id}/comments:
+    get:
+      parameters:
+      - description: Task UUID
+        in: path
+        name: task_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_delivery_http.CommentResponse'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: Список комментариев задачи
+      tags:
+      - comments
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Task UUID
+        in: path
+        name: task_id
+        required: true
+        type: string
+      - description: Comment payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_delivery_http.CreateCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_delivery_http.CommentResponse'
+      security:
+      - BearerAuth: []
+      summary: Создать комментарий к задаче
+      tags:
+      - comments
+  /tasks/{task_id}/comments/{comment_id}:
+    delete:
+      description: Автор или teacher/admin
+      parameters:
+      - description: Task UUID
+        in: path
+        name: task_id
+        required: true
+        type: string
+      - description: Comment UUID
+        in: path
+        name: comment_id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_student-pm_projects-service_internal_pkg_errors.Body'
+      security:
+      - BearerAuth: []
+      summary: Удалить комментарий
+      tags:
+      - comments
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
