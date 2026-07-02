@@ -10,7 +10,6 @@ import type { ApiError } from '../types/api.types';
 /**
  * Базовый axios-инстанс.
  *
- * Исправления относительно оригинала:
  * 1. VITE_API_PREFIX по умолчанию '' (пусто). Бэкенд-gateway использует
  *    пути /auth/register, /groups, /projects — без префикса /api/v1.
  *    В prod nginx режет /api/ → бэк получает /auth/register, /groups и т.д.
@@ -32,7 +31,6 @@ const API_PREFIX = import.meta.env.VITE_API_PREFIX ?? '';
 const API_TIMEOUT = Number(import.meta.env.VITE_API_TIMEOUT) || 15000;
 
 // ─── camelCase ↔ snake_case ────────────────────────────────────────────────────
-// Встроено прямо здесь, чтобы не зависеть от отдельного модуля.
 
 const toSnake = (s: string) =>
   s.replace(/([A-Z])/g, (_, c: string) => `_${c.toLowerCase()}`);

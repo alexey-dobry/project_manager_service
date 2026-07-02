@@ -1,6 +1,7 @@
 package httpdelivery
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -30,6 +31,28 @@ func (h *Handler) actorOr401(c *fiber.Ctx) (usecase.Actor, error) {
 		return usecase.Actor{}, httperr.FromDomain(c, domain.ErrInvalidToken)
 	}
 	return usecase.Actor{ID: uid, Role: role}, nil
+}
+
+// projectStatsOrNil получает статистику по задачам проекта для ответа.
+// При ошибке возвращает nil — сбой подсчёта не должен ронять запрос,
+// клиент получит проект с нулевым tasks_count вместо 500.
+func (h *Handler) projectStatsOrNil(ctx context.Context, projectID uuid.UUID) *domain.ProjectStats {
+	stats, err := h.svc.ProjectStats(ctx, projectID)
+	if err != nil {
+		return nil
+	}
+	return stats
+}
+
+// commentsCountOrZero считает комментарии задачи для карточки на доске.
+// При ошибке возвращает 0 — тот же принцип отказоустойчивости, что и
+// у projectStatsOrNil.
+func (h *Handler) commentsCountOrZero(ctx context.Context, taskID uuid.UUID) int {
+	cs, err := h.svc.ListComments(ctx, taskID)
+	if err != nil {
+		return 0
+	}
+	return len(cs)
 }
 
 func parseUUIDParam(c *fiber.Ctx, name string) (uuid.UUID, error) {
@@ -72,12 +95,12 @@ func (h *Handler) CreateProject(c *fiber.Ctx) error {
 		Title:       req.Title,
 		Description: req.Description,
 		GroupID:     groupID,
-		Deadline:    req.Deadline,
+		Deadline:    req.Deadline.Ptr(),
 	})
 	if err != nil {
 		return httperr.FromDomain(c, err)
 	}
-	return c.Status(fiber.StatusCreated).JSON(toProjectResponse(p))
+	return c.Status(fiber.StatusCreated).JSON(toProjectResponse(p, h.projectStatsOrNil(c.UserContext(), p.ID)))
 }
 
 // ListProjects godoc
@@ -128,7 +151,7 @@ func (h *Handler) ListProjects(c *fiber.Ctx) error {
 	}
 	out := make([]ProjectResponse, 0, len(items))
 	for i := range items {
-		out = append(out, toProjectResponse(&items[i]))
+		out = append(out, toProjectResponse(&items[i], h.projectStatsOrNil(c.UserContext(), items[i].ID)))
 	}
 	limit := f.Limit
 	if limit <= 0 || limit > 100 {
@@ -162,7 +185,7 @@ func (h *Handler) GetProject(c *fiber.Ctx) error {
 	if err != nil {
 		return httperr.FromDomain(c, err)
 	}
-	return c.JSON(toProjectResponse(p))
+	return c.JSON(toProjectResponse(p, h.projectStatsOrNil(c.UserContext(), p.ID)))
 }
 
 // UpdateProject godoc
@@ -197,7 +220,7 @@ func (h *Handler) UpdateProject(c *fiber.Ctx) error {
 	in := usecase.UpdateProjectInput{
 		Title:         req.Title,
 		Description:   req.Description,
-		Deadline:      req.Deadline,
+		Deadline:      req.Deadline.Ptr(),
 		ClearDeadline: req.ClearDeadline,
 	}
 	if req.Status != nil {
@@ -208,7 +231,7 @@ func (h *Handler) UpdateProject(c *fiber.Ctx) error {
 	if err != nil {
 		return httperr.FromDomain(c, err)
 	}
-	return c.JSON(toProjectResponse(p))
+	return c.JSON(toProjectResponse(p, h.projectStatsOrNil(c.UserContext(), p.ID)))
 }
 
 // DeleteProject godoc
@@ -282,10 +305,14 @@ func (h *Handler) Ready(c *fiber.Ctx) error {
 
 // mappers
 
-func toProjectResponse(p *domain.Project) ProjectResponse {
-	return ProjectResponse{
+// toProjectResponse собирает ответ по проекту. stats может быть nil —
+// тогда tasks_count и progress отдаются нулевыми (например, для проекта
+// без единого запроса Stats, если она недоступна).
+func toProjectResponse(p *domain.Project, stats *domain.ProjectStats) ProjectResponse {
+	r := ProjectResponse{
 		ID:          p.ID.String(),
 		Title:       p.Title,
+		Name:        p.Title,
 		Description: p.Description,
 		GroupID:     p.GroupID.String(),
 		OwnerID:     p.OwnerID.String(),
@@ -294,19 +321,32 @@ func toProjectResponse(p *domain.Project) ProjectResponse {
 		CreatedAt:   p.CreatedAt,
 		UpdatedAt:   p.UpdatedAt,
 	}
+	if stats != nil {
+		r.Progress = int(stats.DonePercent + 0.5) // округление до целого
+		r.TasksCount = TasksCountResponse{
+			Total:      stats.TotalTasks,
+			Todo:       stats.ByStatus[domain.TaskTodo],
+			InProgress: stats.ByStatus[domain.TaskInProgress],
+			Done:       stats.ByStatus[domain.TaskDone],
+			Blocked:    stats.ByStatus[domain.TaskBlocked],
+		}
+	}
+	return r
 }
 
-func toTaskResponse(t *domain.Task) TaskResponse {
+func toTaskResponse(t *domain.Task, commentsCount int) TaskResponse {
 	r := TaskResponse{
-		ID:          t.ID.String(),
-		ProjectID:   t.ProjectID.String(),
-		Title:       t.Title,
-		Description: t.Description,
-		Status:      string(t.Status),
-		Priority:    string(t.Priority),
-		DueDate:     t.DueDate,
-		CreatedAt:   t.CreatedAt,
-		UpdatedAt:   t.UpdatedAt,
+		ID:            t.ID.String(),
+		ProjectID:     t.ProjectID.String(),
+		Title:         t.Title,
+		Description:   t.Description,
+		Status:        string(t.Status),
+		Priority:      string(t.Priority),
+		DueDate:       t.DueDate,
+		Order:         t.Order,
+		CommentsCount: commentsCount,
+		CreatedAt:     t.CreatedAt,
+		UpdatedAt:     t.UpdatedAt,
 	}
 	if t.AssigneeID != nil {
 		s := t.AssigneeID.String()

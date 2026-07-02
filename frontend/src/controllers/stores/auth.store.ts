@@ -9,8 +9,8 @@ import { tokenService } from '@controllers/services/token.service';
  * ВАЖНО: isAuthenticated НЕ персистируется в localStorage.
  * Источник истины — tokenService.isAuthenticated() (наличие access-токена).
  * Если персистировать isAuthenticated, то после протухания/удаления токена
- * стор остаётся в состоянии isAuthenticated=true → RegisterPage редиректит
- * на /dashboard, хотя пользователь по факту не авторизован.
+ * стор остаётся в состоянии isAuthenticated=true → страницы логина/регистрации
+ * редиректят на /dashboard, хотя пользователь по факту не авторизован.
  */
 interface AuthState {
   user: User | null;

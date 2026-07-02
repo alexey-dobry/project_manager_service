@@ -140,6 +140,15 @@ func (s *Service) CreateTask(ctx context.Context, actor Actor, projectID uuid.UU
 		return nil, domain.ErrInvalidPriority
 	}
 
+	// Новая задача встаёт в конец колонки todo.
+	todoStatus := domain.TaskTodo
+	_, todoCount, err := s.tasks.ListByProject(ctx, projectID, TaskListFilter{
+		Status: &todoStatus, Limit: 1, Offset: 0,
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	now := s.now().UTC()
 	t := &domain.Task{
 		ID:          uuid.New(),
@@ -150,6 +159,7 @@ func (s *Service) CreateTask(ctx context.Context, actor Actor, projectID uuid.UU
 		Status:      domain.TaskTodo,
 		Priority:    in.Priority,
 		DueDate:     in.DueDate,
+		Order:       todoCount,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
@@ -169,6 +179,15 @@ func (s *Service) GetTask(ctx context.Context, projectID, taskID uuid.UUID) (*do
 		return nil, domain.ErrTaskNotInProject
 	}
 	return t, nil
+}
+
+// GetTaskByID возвращает задачу без проверки принадлежности проекту —
+// для плоских маршрутов вида /tasks/{id}, где project_id неизвестен
+// заранее. Task ID глобально уникален, поэтому дополнительная IDOR-защита
+// (сверка с project_id) здесь не нужна: сам taskID уже однозначно
+// идентифицирует задачу.
+func (s *Service) GetTaskByID(ctx context.Context, taskID uuid.UUID) (*domain.Task, error) {
+	return s.tasks.GetByID(ctx, taskID)
 }
 
 func (s *Service) ListTasks(ctx context.Context, projectID uuid.UUID, f TaskListFilter) ([]domain.Task, int, error) {
@@ -239,6 +258,9 @@ func (s *Service) UpdateTask(ctx context.Context, actor Actor, projectID, taskID
 			return nil, domain.ErrInvalidTransition
 		}
 		t.Status = *in.Status
+	}
+	if in.Order != nil {
+		t.Order = *in.Order
 	}
 	if in.ClearDueDate {
 		t.DueDate = nil

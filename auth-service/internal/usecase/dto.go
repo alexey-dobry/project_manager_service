@@ -40,7 +40,8 @@ type AuthResult struct {
 
 // UpdateUserInput — патч-обновление профиля.
 type UpdateUserInput struct {
-	FullName *string
-	GroupID  *uuid.UUID
-	Role     *domain.Role // RBAC-проверку выполняет вызывающий слой
+	FullName   *string
+	Department *string
+	GroupID    *uuid.UUID
+	Role       *domain.Role // RBAC-проверку выполняет вызывающий слой
 }

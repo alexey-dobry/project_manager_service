@@ -146,25 +146,25 @@ type TaskRepo struct {
 
 func (r *TaskRepo) Create(ctx context.Context, t *domain.Task) error {
 	const q = `
-		INSERT INTO tasks (id, project_id, title, description, assignee_id, status, priority, due_date, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO tasks (id, project_id, title, description, assignee_id, status, priority, due_date, position, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
 	_, err := r.pool.Exec(ctx, q,
 		t.ID, t.ProjectID, t.Title, t.Description, t.AssigneeID,
-		t.Status, t.Priority, t.DueDate, t.CreatedAt, t.UpdatedAt,
+		t.Status, t.Priority, t.DueDate, t.Order, t.CreatedAt, t.UpdatedAt,
 	)
 	return err
 }
 
 func (r *TaskRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Task, error) {
 	const q = `
-		SELECT id, project_id, title, description, assignee_id, status, priority, due_date, created_at, updated_at
+		SELECT id, project_id, title, description, assignee_id, status, priority, due_date, position, created_at, updated_at
 		FROM tasks WHERE id = $1
 	`
 	t := &domain.Task{}
 	err := r.pool.QueryRow(ctx, q, id).Scan(
 		&t.ID, &t.ProjectID, &t.Title, &t.Description, &t.AssigneeID,
-		&t.Status, &t.Priority, &t.DueDate, &t.CreatedAt, &t.UpdatedAt,
+		&t.Status, &t.Priority, &t.DueDate, &t.Order, &t.CreatedAt, &t.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -198,9 +198,9 @@ func (r *TaskRepo) ListByProject(ctx context.Context, projectID uuid.UUID, f use
 	}
 
 	args = append(args, f.Limit, f.Offset)
-	q := "SELECT id, project_id, title, description, assignee_id, status, priority, due_date, created_at, updated_at " +
+	q := "SELECT id, project_id, title, description, assignee_id, status, priority, due_date, position, created_at, updated_at " +
 		"FROM tasks WHERE " + where +
-		" ORDER BY created_at DESC LIMIT $" + strconv.Itoa(len(args)-1) + " OFFSET $" + strconv.Itoa(len(args))
+		" ORDER BY status, position, created_at LIMIT $" + strconv.Itoa(len(args)-1) + " OFFSET $" + strconv.Itoa(len(args))
 
 	rows, err := r.pool.Query(ctx, q, args...)
 	if err != nil {
@@ -212,7 +212,7 @@ func (r *TaskRepo) ListByProject(ctx context.Context, projectID uuid.UUID, f use
 	for rows.Next() {
 		var t domain.Task
 		if err := rows.Scan(&t.ID, &t.ProjectID, &t.Title, &t.Description, &t.AssigneeID,
-			&t.Status, &t.Priority, &t.DueDate, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			&t.Status, &t.Priority, &t.DueDate, &t.Order, &t.CreatedAt, &t.UpdatedAt); err != nil {
 			return nil, 0, err
 		}
 		out = append(out, t)
@@ -224,11 +224,11 @@ func (r *TaskRepo) Update(ctx context.Context, t *domain.Task) error {
 	const q = `
 		UPDATE tasks
 		SET title = $1, description = $2, assignee_id = $3, status = $4, priority = $5,
-		    due_date = $6, updated_at = $7
-		WHERE id = $8
+		    due_date = $6, position = $7, updated_at = $8
+		WHERE id = $9
 	`
 	tag, err := r.pool.Exec(ctx, q,
-		t.Title, t.Description, t.AssigneeID, t.Status, t.Priority, t.DueDate, t.UpdatedAt, t.ID,
+		t.Title, t.Description, t.AssigneeID, t.Status, t.Priority, t.DueDate, t.Order, t.UpdatedAt, t.ID,
 	)
 	if err != nil {
 		return err

@@ -319,3 +319,49 @@ func TestProjectStats_NotFound(t *testing.T) {
 	_, err := svc.ProjectStats(context.Background(), uuid.New())
 	require.ErrorIs(t, err, domain.ErrProjectNotFound)
 }
+
+// ===== Order (Kanban-позиция) =====
+
+func TestCreateTask_OrderAppendsToEndOfColumn(t *testing.T) {
+	svc, _, _, _ := newSUT()
+	owner := actor(domain.RoleStudent)
+	p, _ := svc.CreateProject(context.Background(), owner, usecase.CreateProjectInput{
+		Title: "X", GroupID: uuid.New(),
+	})
+
+	t1, err := svc.CreateTask(context.Background(), owner, p.ID, usecase.CreateTaskInput{
+		Title: "T1", Priority: domain.PriorityMedium,
+	})
+	require.NoError(t, err)
+	require.Equal(t, 0, t1.Order, "первая задача в колонке — order 0")
+
+	t2, err := svc.CreateTask(context.Background(), owner, p.ID, usecase.CreateTaskInput{
+		Title: "T2", Priority: domain.PriorityMedium,
+	})
+	require.NoError(t, err)
+	require.Equal(t, 1, t2.Order, "вторая задача встаёт следом")
+}
+
+func TestUpdateTask_AssigneeCanReorder(t *testing.T) {
+	svc, _, _, _ := newSUT()
+	owner := actor(domain.RoleStudent)
+	p, _ := svc.CreateProject(context.Background(), owner, usecase.CreateProjectInput{
+		Title: "X", GroupID: uuid.New(),
+	})
+	assignee := actor(domain.RoleStudent)
+	t1, err := svc.CreateTask(context.Background(), owner, p.ID, usecase.CreateTaskInput{
+		Title: "T", AssigneeID: &assignee.ID, Priority: domain.PriorityMedium,
+	})
+	require.NoError(t, err)
+
+	// Drag-and-drop: assignee двигает свою задачу в in_progress с новой позицией.
+	inProg := domain.TaskInProgress
+	newOrder := 3
+	updated, err := svc.UpdateTask(context.Background(), assignee, p.ID, t1.ID, usecase.UpdateTaskInput{
+		Status: &inProg,
+		Order:  &newOrder,
+	})
+	require.NoError(t, err)
+	require.Equal(t, domain.TaskInProgress, updated.Status)
+	require.Equal(t, 3, updated.Order)
+}

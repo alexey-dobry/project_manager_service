@@ -28,8 +28,14 @@ func RegisterRoutes(app *fiber.App, h *Handler, v *jwt.Verifier) {
 	projects.Patch("/:id/tasks/:task_id", h.UpdateTask)
 	projects.Delete("/:id/tasks/:task_id", h.DeleteTask)
 
-	// comments
+	// comments + плоские алиасы задач (некоторым клиентам удобнее REST-ресурс
+	// /tasks без обязательного project_id в пути).
 	tasks := app.Group("/tasks", AuthRequired(v))
+	tasks.Post("", h.CreateTaskFlat)
+	tasks.Post("/move", h.MoveTask)
+	tasks.Get("/:id", h.GetTaskFlat)
+	tasks.Patch("/:id", h.UpdateTaskFlat)
+	tasks.Delete("/:id", h.DeleteTaskFlat)
 	tasks.Post("/:task_id/comments", h.CreateComment)
 	tasks.Get("/:task_id/comments", h.ListComments)
 	tasks.Delete("/:task_id/comments/:comment_id", h.DeleteComment)

@@ -1,3 +1,6 @@
+# ============================================================
+# Stage 1: Build
+# ============================================================
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -14,13 +17,21 @@ COPY . .
 # Production-сборка через Vite
 RUN npm run build
 
+# ============================================================
+# Stage 2: Serve via Nginx
+# ============================================================
 FROM nginx:alpine AS runner
 
 # Удаляем дефолтную страницу
 RUN rm -rf /usr/share/nginx/html/*
 
-# Копируем кастомный конфиг nginx
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Шаблон конфига: официальный nginx-образ сам прогонит его через envsubst
+# при старте контейнера и положит результат в /etc/nginx/conf.d/default.conf.
+# NGINX_ENVSUBST_FILTER ограничивает подстановку только переменной
+# GATEWAY_HOST, чтобы envsubst не затронул встроенные $host, $remote_addr
+# и другие nginx-переменные внутри конфига.
+ENV NGINX_ENVSUBST_FILTER=^GATEWAY_HOST$
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 
 # Копируем артефакты сборки
 COPY --from=builder /app/dist /usr/share/nginx/html

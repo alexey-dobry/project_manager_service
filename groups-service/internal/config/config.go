@@ -15,6 +15,10 @@ type Config struct {
 	Postgres PostgresConfig
 	JWT      JWTConfig
 	Logger   LoggerConfig
+	// AuthServiceURL — базовый URL auth-service. Используется для обогащения
+	// ответа GET /groups/{id} данными участников (имя, роль): groups-service
+	// не хранит эти поля сам, только UserID.
+	AuthServiceURL string
 }
 
 type AppConfig struct {
@@ -81,6 +85,8 @@ func Load() (*Config, error) {
 	v.SetDefault("logger.level", "info")
 	v.SetDefault("logger.format", "console")
 
+	v.SetDefault("auth_service_url", "http://auth-service:8081")
+
 	cfg := &Config{
 		App: AppConfig{
 			Name: v.GetString("app.name"),
@@ -106,6 +112,7 @@ func Load() (*Config, error) {
 			Level:  v.GetString("logger.level"),
 			Format: v.GetString("logger.format"),
 		},
+		AuthServiceURL: v.GetString("auth_service_url"),
 	}
 
 	if cfg.JWT.Secret == "" {

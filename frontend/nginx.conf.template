@@ -1,5 +1,11 @@
-# Конфиг Nginx для production-сборки SPA
-# Раздаёт статику + проксирует /api на API Gateway бэкенда
+# Конфиг Nginx для production-сборки SPA.
+# Раздаёт статику + проксирует /api на API Gateway бэкенда.
+#
+# Это ШАБЛОН: при старте контейнера official nginx-образ сам прогоняет его
+# через envsubst и кладёт результат в /etc/nginx/conf.d/default.conf.
+# Подставляется только $GATEWAY_HOST — см. NGINX_ENVSUBST_FILTER в Dockerfile,
+# он защищает встроенные переменные nginx ($host, $remote_addr и т.д.) от
+# случайной подмены.
 
 server {
     listen 80;
@@ -40,10 +46,13 @@ server {
         add_header Cache-Control "no-store, no-cache, must-revalidate";
     }
 
-    # Проксирование API на бэкенд (имя сервиса в docker-compose сети)
-    # В dev можно убрать и обращаться напрямую к http://localhost:8080
+    # Проксирование API на бэкенд через приватную сеть Railway.
+    # $GATEWAY_HOST подставляется envsubst-ом из переменной окружения
+    # GATEWAY_HOST при старте контейнера (см. Dockerfile и Railway Variables).
+    # ВАЖНО: строго http://, не https:// — приватная сеть Railway не имеет
+    # TLS-терминации, и https здесь просто не установит соединение.
     location /api/ {
-        proxy_pass http://host.docker.internal:8080/;
+        proxy_pass http://$GATEWAY_HOST/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

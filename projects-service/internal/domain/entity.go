@@ -139,8 +139,12 @@ type Task struct {
 	Status      TaskStatus   `json:"status"`
 	Priority    TaskPriority `json:"priority"`
 	DueDate     *time.Time   `json:"due_date,omitempty"`
-	CreatedAt   time.Time    `json:"created_at"`
-	UpdatedAt   time.Time    `json:"updated_at"`
+	// Order — позиция карточки внутри колонки Kanban-доски (сортировка
+	// внутри одного статуса). Хранится в БД как "position", т.к. order —
+	// зарезервированное слово SQL.
+	Order     int       `json:"order"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // Comment — комментарий к задаче.

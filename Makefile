@@ -10,7 +10,7 @@ help: ## показать справку
 # ───── docker-compose ─────
 
 .PHONY: up down logs ps restart
-up: ## поднять всё (БД + сервисы)
+up: ## поднять всё (БД + бэкенд-сервисы + gateway + фронтенд)
 	docker-compose up -d --build
 
 up-db: ## поднять только БД (для локальной разработки сервисов)
@@ -51,12 +51,15 @@ migrate-down: ## откатить по одной миграции в каждо
 
 # ───── тесты ─────
 
-.PHONY: test test-unit test-integration cover
-test: ## запустить тесты во всех сервисах
+.PHONY: test test-unit test-integration cover test-frontend
+test: ## запустить тесты во всех Go-сервисах
 	@for s in $(SERVICES); do \
 		echo "→ test $$s"; \
 		$(MAKE) -C $$s test || exit 1; \
 	done
+
+test-frontend: ## тесты фронтенда (свой тулинг, не Go)
+	cd frontend && npm test -- --run
 
 test-unit:
 	@for s in $(BACKENDS); do $(MAKE) -C $$s test-unit || exit 1; done
@@ -90,6 +93,7 @@ smoke: ## health-check всех сервисов через gateway
 	@echo "auth:       "      && curl -fs http://localhost:8081/health | head -1
 	@echo "groups:     "      && curl -fs http://localhost:8082/health | head -1
 	@echo "projects:   "      && curl -fs http://localhost:8083/health | head -1
+	@echo "frontend:   "      && curl -fs -o /dev/null -w "%{http_code}\n" http://localhost:80/
 
 # ───── fuzz ─────
 # Покрывает критику: «нет FuzzXxx, нет corpus, нет make-цели».

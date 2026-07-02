@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "vitest.explorer",
+    "ms-azuretools.vscode-docker",
+    "formulahendry.auto-rename-tag",
+    "christian-kohler.path-intellisense",
+    "yoavbls.pretty-ts-errors",
+    "streetsidesoftware.code-spell-checker",
+    "streetsidesoftware.code-spell-checker-russian",
+    "bierner.markdown-mermaid"
+  ]
+}

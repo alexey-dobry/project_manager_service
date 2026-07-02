@@ -1,0 +1,42 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "chrome",
+      "request": "launch",
+      "name": "Vite: Запуск в Chrome",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/src",
+      "sourceMaps": true,
+      "sourceMapPathOverrides": {
+        "webpack:///./src/*": "${webRoot}/*",
+        "webpack:///src/*": "${webRoot}/*",
+        "webpack:///*": "*",
+        "webpack:///./~/*": "${webRoot}/node_modules/*"
+      },
+      "preLaunchTask": "npm: dev"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Vitest: текущий файл",
+      "autoAttachChildProcesses": true,
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
+      "args": ["run", "${relativeFile}"],
+      "smartStep": true,
+      "console": "integratedTerminal"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Vitest: все тесты",
+      "autoAttachChildProcesses": true,
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"],
+      "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
+      "args": ["run"],
+      "smartStep": true,
+      "console": "integratedTerminal"
+    }
+  ]
+}

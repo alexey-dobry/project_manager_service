@@ -3,11 +3,12 @@ package httpdelivery
 import "time"
 
 // CreateGroupRequest — создание группы.
+// LeaderID необязателен: если не передан, лидером становится инициатор запроса.
 type CreateGroupRequest struct {
-	Name     string `json:"name"      validate:"required,min=2,max=120"      example:"БПИ-211"`
-	Course   int    `json:"course"    validate:"required,gt=0,max=10"        example:"2"`
-	Faculty  string `json:"faculty"   validate:"required,min=2,max=120"      example:"ФИТ"`
-	LeaderID string `json:"leader_id" validate:"required,uuid"               example:"7c0a..."`
+	Name     string  `json:"name"      validate:"required,min=2,max=120" example:"БПИ-211"`
+	Course   int     `json:"course"    validate:"required,gt=0,max=10"   example:"2"`
+	Faculty  string  `json:"faculty"   validate:"required,min=2,max=120" example:"ФИТ"`
+	LeaderID *string `json:"leader_id,omitempty" validate:"omitempty,uuid" example:"7c0a..."`
 }
 
 // UpdateGroupRequest — частичное обновление.
@@ -20,8 +21,10 @@ type UpdateGroupRequest struct {
 
 // AddMemberRequest — добавление участника.
 type AddMemberRequest struct {
-	UserID      string `json:"user_id"       validate:"required,uuid"`
-	RoleInGroup string `json:"role_in_group" validate:"required,oneof=member leader" example:"member"`
+	UserID string `json:"user_id" validate:"required,uuid"`
+	// RoleInGroup необязателен: если не передан, участник добавляется
+	// с ролью member.
+	RoleInGroup string `json:"role_in_group,omitempty" validate:"omitempty,oneof=member leader" example:"member"`
 }
 
 // GroupResponse — публичная проекция группы.
@@ -33,6 +36,23 @@ type GroupResponse struct {
 	LeaderID  string    `json:"leader_id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// MemberInfo — участник группы, обогащённый данными из auth-service
+// (сам groups-service хранит только UserID).
+type MemberInfo struct {
+	ID       string `json:"id"`
+	FullName string `json:"full_name"`
+	Role     string `json:"role"`
+}
+
+// GroupWithMembersResponse — ответ GET /groups/{id}: группа вместе с
+// лидером и полным списком участников, чтобы клиенту не нужно было
+// делать отдельный запрос за составом группы.
+type GroupWithMembersResponse struct {
+	GroupResponse
+	Leader  *MemberInfo  `json:"leader,omitempty"`
+	Members []MemberInfo `json:"members"`
 }
 
 // MembershipResponse — проекция membership.

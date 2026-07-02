@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, GraduationCap, Pencil, UserMinus, UserPlus } from 'lucide-react';
 
-import { useGroup, useRemoveMember, useUpdateGroup } from '@controllers/hooks/useGroups';
+import { useAddMember, useGroup, useRemoveMember, useUpdateGroup } from '@controllers/hooks/useGroups';
 import { useProjectsList } from '@controllers/hooks/useProjects';
 import { useAuthStore } from '@controllers/stores/auth.store';
+import { usersApi } from '@models/api/users.api';
 import { Card, CardContent, CardHeader, CardTitle } from '@views/components/ui/card';
 import { Button } from '@views/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@views/components/ui/avatar';
@@ -12,6 +13,7 @@ import { Badge } from '@views/components/ui/badge';
 import { Loader } from '@views/components/common/Loader';
 import { ConfirmDialog } from '@views/components/common/ConfirmDialog';
 import { GroupFormDialog } from '@views/components/groups/GroupFormDialog';
+import { AddMemberDialog } from '@views/components/groups/AddMemberDialog';
 import { ROUTES, buildPath } from '@config/routes';
 import { getInitials } from '@utils/formatters';
 import { USER_ROLES, PROJECT_STATUSES } from '@utils/constants';
@@ -24,10 +26,20 @@ export function GroupDetailPage() {
   const { data: projects } = useProjectsList({ groupId: id, pageSize: 50 });
 
   const [editOpen, setEditOpen] = useState(false);
+  const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<string | null>(null);
 
   const updateMut = useUpdateGroup(id ?? '');
   const removeMemberMut = useRemoveMember(id ?? '');
+  const addMemberMut = useAddMember(id ?? '');
+
+  const handleAddMember = async (email: string) => {
+    const matches = await usersApi.searchByEmail(email);
+    if (matches.length === 0) {
+      throw new Error('Пользователь с таким email не найден');
+    }
+    await addMemberMut.mutateAsync(matches[0].id);
+  };
 
   if (isLoading) return <Loader full label="Загрузка группы..." />;
   if (!group) {
@@ -79,7 +91,7 @@ export function GroupDetailPage() {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Участники ({group.members.length})</CardTitle>
             {canEdit && (
-              <Button size="sm" variant="outline">
+              <Button size="sm" variant="outline" onClick={() => setAddMemberOpen(true)}>
                 <UserPlus className="h-4 w-4" />
               </Button>
             )}
@@ -158,6 +170,16 @@ export function GroupDetailPage() {
             updateMut.mutate(values, { onSuccess: () => setEditOpen(false) });
           }}
           loading={updateMut.isPending}
+        />
+      )}
+
+      {/* Диалог добавления участника */}
+      {canEdit && (
+        <AddMemberDialog
+          open={addMemberOpen}
+          onOpenChange={setAddMemberOpen}
+          onSubmit={handleAddMember}
+          loading={addMemberMut.isPending}
         />
       )}
 

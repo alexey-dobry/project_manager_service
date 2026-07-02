@@ -1,5 +1,5 @@
 # student-pm — система управления проектами для студенческих групп.
-# Поднимает: 3 PostgreSQL (по одному на сервис), 3 backend-сервиса, 1 gateway.
+# Поднимает: 3 PostgreSQL (по одному на сервис), 3 backend-сервиса, 1 gateway, 1 фронтенд.
 
 services:
   # ===================== databases =====================
@@ -102,6 +102,7 @@ services:
       POSTGRES_DBNAME: groups
       POSTGRES_SSLMODE: disable
       JWT_SECRET: ${JWT_SECRET:-change-me-please-32-chars-minimum-secret}
+      AUTH_SERVICE_URL: http://auth-service:8081
       LOGGER_LEVEL: debug
       LOGGER_FORMAT: json
     ports:
@@ -156,6 +157,25 @@ services:
       LOGGER_FORMAT: json
     ports:
       - "8080:8080"
+    networks: [backend]
+    restart: unless-stopped
+
+  # ===================== frontend =====================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: student-pm-frontend
+    depends_on:
+      - api-gateway
+    environment:
+      # nginx.conf.template резолвит этот хост через envsubst при старте
+      # контейнера — см. frontend/Dockerfile и frontend/nginx.conf.template.
+      # Имя "api-gateway" резолвится тут напрямую, т.к. фронтенд теперь
+      # в той же compose-сети, что и бэкенд — никакой внешней сети не нужно.
+      GATEWAY_HOST: api-gateway:8080
+    ports:
+      - "80:80"
     networks: [backend]
     restart: unless-stopped
 

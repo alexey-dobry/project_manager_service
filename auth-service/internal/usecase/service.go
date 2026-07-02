@@ -139,6 +139,16 @@ func (s *AuthService) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, 
 	return s.users.GetByID(ctx, id)
 }
 
+// FindByEmail ищет пользователя по email. Используется, например, при
+// добавлении участника в группу — по адресу почты находят его ID.
+func (s *AuthService) FindByEmail(ctx context.Context, email string) (*domain.User, error) {
+	email = strings.ToLower(strings.TrimSpace(email))
+	if email == "" {
+		return nil, domain.ErrUserNotFound
+	}
+	return s.users.GetByEmail(ctx, email)
+}
+
 // Update — частичное обновление профиля.
 func (s *AuthService) Update(ctx context.Context, id uuid.UUID, in UpdateUserInput) (*domain.User, error) {
 	user, err := s.users.GetByID(ctx, id)
@@ -147,6 +157,9 @@ func (s *AuthService) Update(ctx context.Context, id uuid.UUID, in UpdateUserInp
 	}
 	if in.FullName != nil {
 		user.FullName = *in.FullName
+	}
+	if in.Department != nil {
+		user.Department = in.Department
 	}
 	if in.GroupID != nil {
 		user.GroupID = in.GroupID
@@ -162,6 +175,29 @@ func (s *AuthService) Update(ctx context.Context, id uuid.UUID, in UpdateUserInp
 		return nil, err
 	}
 	return user, nil
+}
+
+// ChangePassword проверяет текущий пароль и заменяет его на новый.
+// Все refresh-токены пользователя ревокируются, чтобы прежние сессии
+// не продолжали действовать со старым паролем.
+func (s *AuthService) ChangePassword(ctx context.Context, id uuid.UUID, currentPassword, newPassword string) error {
+	user, err := s.users.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if err := s.hasher.Compare(user.PasswordHash, currentPassword); err != nil {
+		return domain.ErrInvalidCredentials
+	}
+	hash, err := s.hasher.Hash(newPassword)
+	if err != nil {
+		return err
+	}
+	user.PasswordHash = hash
+	user.UpdatedAt = s.now().UTC()
+	if err := s.users.Update(ctx, user); err != nil {
+		return err
+	}
+	return s.tokens.RevokeAllForUser(ctx, user.ID, s.now().UTC())
 }
 
 // issueTokens — общий путь выдачи пары access+refresh с записью refresh в БД.

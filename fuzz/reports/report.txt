@@ -1,0 +1,103 @@
+──────── auth-service: FuzzParseAccessToken
+cd auth-service && go test ./internal/pkg/jwt -run=- -fuzz=FuzzParseAccessToken -fuzztime=30s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/142 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 142/142 completed, now fuzzing with 16 workers
+fuzz: elapsed: 3s, execs: 285606 (95192/sec), new interesting: 15 (total: 157)
+fuzz: elapsed: 6s, execs: 447883 (54094/sec), new interesting: 20 (total: 162)
+fuzz: elapsed: 9s, execs: 524956 (25687/sec), new interesting: 24 (total: 166)
+fuzz: elapsed: 12s, execs: 569383 (14812/sec), new interesting: 24 (total: 166)
+fuzz: elapsed: 15s, execs: 572105 (906/sec), new interesting: 24 (total: 166)
+fuzz: elapsed: 18s, execs: 572105 (0/sec), new interesting: 24 (total: 166)
+fuzz: elapsed: 21s, execs: 572105 (0/sec), new interesting: 24 (total: 166)
+fuzz: elapsed: 24s, execs: 572105 (0/sec), new interesting: 24 (total: 166)
+fuzz: elapsed: 27s, execs: 572105 (0/sec), new interesting: 24 (total: 166)
+fuzz: elapsed: 30s, execs: 572105 (0/sec), new interesting: 24 (total: 166)
+fuzz: elapsed: 31s, execs: 572105 (0/sec), new interesting: 24 (total: 166)
+PASS
+ok  	github.com/student-pm/auth-service/internal/pkg/jwt	31.031s
+──────── auth-service: FuzzBcryptCompare
+cd auth-service && go test ./internal/pkg/hasher -run=- -fuzz=FuzzBcryptCompare -fuzztime=30s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/14 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 14/14 completed, now fuzzing with 16 workers
+fuzz: elapsed: 3s, execs: 7109 (2369/sec), new interesting: 0 (total: 14)
+fuzz: elapsed: 6s, execs: 14428 (2440/sec), new interesting: 0 (total: 14)
+fuzz: elapsed: 9s, execs: 21650 (2407/sec), new interesting: 0 (total: 14)
+fuzz: elapsed: 12s, execs: 28514 (2288/sec), new interesting: 0 (total: 14)
+fuzz: elapsed: 15s, execs: 35787 (2424/sec), new interesting: 0 (total: 14)
+fuzz: elapsed: 18s, execs: 42909 (2374/sec), new interesting: 0 (total: 14)
+fuzz: elapsed: 21s, execs: 49875 (2322/sec), new interesting: 0 (total: 14)
+fuzz: elapsed: 24s, execs: 56675 (2266/sec), new interesting: 0 (total: 14)
+fuzz: elapsed: 27s, execs: 63180 (2168/sec), new interesting: 0 (total: 14)
+fuzz: elapsed: 30s, execs: 69672 (2165/sec), new interesting: 0 (total: 14)
+fuzz: elapsed: 30s, execs: 69672 (0/sec), new interesting: 0 (total: 14)
+PASS
+ok  	github.com/student-pm/auth-service/internal/pkg/hasher	30.083s
+──────── auth-service: FuzzRegisterHandler
+cd auth-service && go test ./internal/delivery/http -run=- -fuzz=FuzzRegisterHandler -fuzztime=30s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/81 completed
+fuzz: elapsed: 1s, gathering baseline coverage: 81/81 completed, now fuzzing with 16 workers
+fuzz: elapsed: 3s, execs: 36395 (12131/sec), new interesting: 22 (total: 103)
+fuzz: elapsed: 6s, execs: 64002 (9201/sec), new interesting: 33 (total: 114)
+fuzz: elapsed: 9s, execs: 70405 (2134/sec), new interesting: 34 (total: 115)
+fuzz: elapsed: 12s, execs: 78885 (2827/sec), new interesting: 34 (total: 115)
+fuzz: elapsed: 15s, execs: 82840 (1318/sec), new interesting: 36 (total: 117)
+fuzz: elapsed: 18s, execs: 83230 (130/sec), new interesting: 36 (total: 117)
+fuzz: elapsed: 21s, execs: 83230 (0/sec), new interesting: 36 (total: 117)
+fuzz: elapsed: 24s, execs: 83230 (0/sec), new interesting: 36 (total: 117)
+fuzz: elapsed: 27s, execs: 83230 (0/sec), new interesting: 36 (total: 117)
+fuzz: elapsed: 30s, execs: 83230 (0/sec), new interesting: 36 (total: 117)
+fuzz: elapsed: 31s, execs: 83230 (0/sec), new interesting: 36 (total: 117)
+PASS
+ok  	github.com/student-pm/auth-service/internal/delivery/http	31.043s
+──────── groups-service: FuzzCreateGroupValidation
+cd groups-service && go test ./internal/usecase -run=- -fuzz=FuzzCreateGroupValidation -fuzztime=30s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/84 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 84/84 completed, now fuzzing with 16 workers
+fuzz: elapsed: 3s, execs: 474860 (158234/sec), new interesting: 0 (total: 84)
+fuzz: elapsed: 6s, execs: 1003663 (176307/sec), new interesting: 2 (total: 86)
+fuzz: elapsed: 9s, execs: 1490768 (162369/sec), new interesting: 2 (total: 86)
+fuzz: elapsed: 12s, execs: 1997966 (169059/sec), new interesting: 2 (total: 86)
+fuzz: elapsed: 15s, execs: 2509274 (170420/sec), new interesting: 2 (total: 86)
+fuzz: elapsed: 18s, execs: 2997666 (162825/sec), new interesting: 2 (total: 86)
+fuzz: elapsed: 21s, execs: 3512322 (171529/sec), new interesting: 2 (total: 86)
+fuzz: elapsed: 24s, execs: 4009187 (165647/sec), new interesting: 2 (total: 86)
+fuzz: elapsed: 27s, execs: 4521421 (170694/sec), new interesting: 3 (total: 87)
+fuzz: elapsed: 30s, execs: 5022041 (166916/sec), new interesting: 3 (total: 87)
+fuzz: elapsed: 30s, execs: 5022041 (0/sec), new interesting: 3 (total: 87)
+PASS
+ok  	github.com/student-pm/groups-service/internal/usecase	30.102s
+──────── projects-service: FuzzTaskStateMachine
+cd projects-service && go test ./internal/domain -run=- -fuzz=FuzzTaskStateMachine -fuzztime=30s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/11 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 11/11 completed, now fuzzing with 16 workers
+fuzz: elapsed: 3s, execs: 535587 (178508/sec), new interesting: 1 (total: 12)
+fuzz: elapsed: 6s, execs: 1091994 (185349/sec), new interesting: 1 (total: 12)
+fuzz: elapsed: 9s, execs: 1620870 (176386/sec), new interesting: 1 (total: 12)
+fuzz: elapsed: 12s, execs: 2169677 (182923/sec), new interesting: 1 (total: 12)
+fuzz: elapsed: 15s, execs: 2710621 (180324/sec), new interesting: 1 (total: 12)
+fuzz: elapsed: 18s, execs: 3239265 (176257/sec), new interesting: 1 (total: 12)
+fuzz: elapsed: 21s, execs: 3782939 (181175/sec), new interesting: 1 (total: 12)
+fuzz: elapsed: 24s, execs: 4330771 (182638/sec), new interesting: 1 (total: 12)
+fuzz: elapsed: 27s, execs: 4871981 (180380/sec), new interesting: 1 (total: 12)
+fuzz: elapsed: 30s, execs: 5410634 (179589/sec), new interesting: 1 (total: 12)
+fuzz: elapsed: 30s, execs: 5410634 (0/sec), new interesting: 1 (total: 12)
+PASS
+ok  	github.com/student-pm/projects-service/internal/domain	30.103s
+──────── projects-service: FuzzCreateCommentValidation
+cd projects-service && go test ./internal/usecase -run=- -fuzz=FuzzCreateCommentValidation -fuzztime=30s
+fuzz: elapsed: 0s, gathering baseline coverage: 0/76 completed
+fuzz: elapsed: 0s, gathering baseline coverage: 76/76 completed, now fuzzing with 16 workers
+fuzz: elapsed: 3s, execs: 426360 (142089/sec), new interesting: 0 (total: 76)
+fuzz: elapsed: 6s, execs: 868611 (147423/sec), new interesting: 0 (total: 76)
+fuzz: elapsed: 9s, execs: 1300209 (143852/sec), new interesting: 2 (total: 78)
+fuzz: elapsed: 12s, execs: 1743164 (147670/sec), new interesting: 3 (total: 79)
+fuzz: elapsed: 15s, execs: 2189821 (148866/sec), new interesting: 8 (total: 84)
+fuzz: elapsed: 18s, execs: 2599252 (136481/sec), new interesting: 11 (total: 87)
+fuzz: elapsed: 21s, execs: 3034686 (145147/sec), new interesting: 11 (total: 87)
+fuzz: elapsed: 24s, execs: 3475479 (146937/sec), new interesting: 11 (total: 87)
+fuzz: elapsed: 27s, execs: 3904255 (142947/sec), new interesting: 11 (total: 87)
+fuzz: elapsed: 30s, execs: 4343147 (146288/sec), new interesting: 13 (total: 89)
+fuzz: elapsed: 30s, execs: 4343147 (0/sec), new interesting: 13 (total: 89)
+PASS
+ok  	github.com/student-pm/projects-service/internal/usecase	30.114s
+✓ go fuzz: пройдено за FUZZTIME=30s на цель

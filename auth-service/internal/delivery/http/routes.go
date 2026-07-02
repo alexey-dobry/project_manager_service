@@ -23,9 +23,12 @@ func RegisterRoutes(app *fiber.App, h *Handler, tp usecase.TokenProvider) {
 	// protected
 	authProtected := app.Group("/auth", AuthRequired(tp))
 	authProtected.Post("/logout", h.Logout)
+	authProtected.Patch("/me", h.UpdateMe)
+	authProtected.Post("/change-password", h.ChangePassword)
 
 	users := app.Group("/users", AuthRequired(tp))
 	users.Get("/me", h.Me)
+	users.Get("/search", h.SearchUsersByEmail)
 	users.Get("/:id", h.GetUserByID)
 	users.Patch("/:id", h.UpdateUser)
 }

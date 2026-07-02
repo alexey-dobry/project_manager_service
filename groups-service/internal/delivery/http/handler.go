@@ -2,23 +2,26 @@ package httpdelivery
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
 	"github.com/student-pm/groups-service/internal/domain"
+	"github.com/student-pm/groups-service/internal/pkg/authclient"
 	httperr "github.com/student-pm/groups-service/internal/pkg/errors"
 	"github.com/student-pm/groups-service/internal/pkg/validator"
 	"github.com/student-pm/groups-service/internal/usecase"
 )
 
 type Handler struct {
-	groups    *usecase.GroupService
-	validator *validator.Validator
+	groups     *usecase.GroupService
+	validator  *validator.Validator
+	authClient *authclient.Client
 }
 
-func NewHandler(g *usecase.GroupService, v *validator.Validator) *Handler {
-	return &Handler{groups: g, validator: v}
+func NewHandler(g *usecase.GroupService, v *validator.Validator, ac *authclient.Client) *Handler {
+	return &Handler{groups: g, validator: v, authClient: ac}
 }
 
 // actorOr401 извлекает Actor из контекста или возвращает 401-ответ.
@@ -55,9 +58,13 @@ func (h *Handler) CreateGroup(c *fiber.Ctx) error {
 	if details, err := h.validator.Validate(req); err != nil {
 		return httperr.Send(c, fiber.StatusBadRequest, "validation_failed", "validation failed", details)
 	}
-	leaderID, err := uuid.Parse(req.LeaderID)
-	if err != nil {
-		return httperr.Send(c, fiber.StatusBadRequest, "invalid_leader_id", "leader_id must be UUID", nil)
+	leaderID := actor.ID
+	if req.LeaderID != nil {
+		parsed, err := uuid.Parse(*req.LeaderID)
+		if err != nil {
+			return httperr.Send(c, fiber.StatusBadRequest, "invalid_leader_id", "leader_id must be UUID", nil)
+		}
+		leaderID = parsed
 	}
 	g, err := h.groups.Create(c.UserContext(), actor, usecase.CreateGroupInput{
 		Name: req.Name, Course: req.Course, Faculty: req.Faculty, LeaderID: leaderID,
@@ -131,7 +138,50 @@ func (h *Handler) GetGroup(c *fiber.Ctx) error {
 	if err != nil {
 		return httperr.FromDomain(c, err)
 	}
-	return c.JSON(toGroupResponse(g))
+
+	memberships, err := h.groups.ListMembers(c.UserContext(), id)
+	if err != nil {
+		return httperr.FromDomain(c, err)
+	}
+
+	token := bearerToken(c)
+	members := make([]MemberInfo, 0, len(memberships))
+	var leader *MemberInfo
+	for i := range memberships {
+		info, err := h.authClient.GetUser(c.UserContext(), token, memberships[i].UserID)
+		if err != nil {
+			// Один недоступный auth-service/пользователь не должен рушить
+			// всю страницу группы — пропускаем и отдаём остальных.
+			continue
+		}
+		mi := MemberInfo{ID: info.ID, FullName: info.FullName, Role: info.Role}
+		members = append(members, mi)
+		if memberships[i].UserID == g.LeaderID {
+			leaderCopy := mi
+			leader = &leaderCopy
+		}
+	}
+	// Лидер мог не попасть в список participants (например, ещё не
+	// добавлен как member) — на этот случай запрашиваем его отдельно.
+	if leader == nil {
+		if info, err := h.authClient.GetUser(c.UserContext(), token, g.LeaderID); err == nil {
+			leader = &MemberInfo{ID: info.ID, FullName: info.FullName, Role: info.Role}
+		}
+	}
+
+	resp := GroupWithMembersResponse{
+		GroupResponse: toGroupResponse(g),
+		Leader:        leader,
+		Members:       members,
+	}
+	return c.JSON(resp)
+}
+
+// bearerToken достаёт исходный токен из заголовка запроса — нужен для
+// проброса в auth-service при обогащении ответа данными участников.
+func bearerToken(c *fiber.Ctx) string {
+	raw := c.Get("Authorization")
+	return strings.TrimSpace(strings.TrimPrefix(raw, "Bearer "))
 }
 
 // UpdateGroup godoc
@@ -263,8 +313,12 @@ func (h *Handler) AddMember(c *fiber.Ctx) error {
 	if err != nil {
 		return httperr.Send(c, fiber.StatusBadRequest, "invalid_user_id", "user_id must be UUID", nil)
 	}
+	role := domain.MembershipRole(req.RoleInGroup)
+	if req.RoleInGroup == "" {
+		role = domain.MembershipMember
+	}
 	m, err := h.groups.AddMember(c.UserContext(), actor, groupID, usecase.AddMemberInput{
-		UserID: uid, Role: domain.MembershipRole(req.RoleInGroup),
+		UserID: uid, Role: role,
 	})
 	if err != nil {
 		return httperr.FromDomain(c, err)

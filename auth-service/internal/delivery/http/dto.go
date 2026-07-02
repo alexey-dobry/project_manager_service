@@ -23,20 +23,28 @@ type RefreshRequest struct {
 
 // UpdateUserRequest — частичное обновление профиля.
 type UpdateUserRequest struct {
-	FullName *string `json:"full_name,omitempty" validate:"omitempty,min=2,max=120"`
-	GroupID  *string `json:"group_id,omitempty"  validate:"omitempty,uuid"`
-	Role     *string `json:"role,omitempty"      validate:"omitempty,oneof=student group_leader teacher admin"`
+	FullName   *string `json:"full_name,omitempty"   validate:"omitempty,min=2,max=120"`
+	Department *string `json:"department,omitempty"  validate:"omitempty,max=200"`
+	GroupID    *string `json:"group_id,omitempty"    validate:"omitempty,uuid"`
+	Role       *string `json:"role,omitempty"        validate:"omitempty,oneof=student group_leader teacher admin"`
+}
+
+// ChangePasswordRequest — смена пароля текущего пользователя.
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password" validate:"required"`
+	NewPassword     string `json:"new_password"     validate:"required,min=8,max=72"`
 }
 
 // UserResponse — публичная проекция пользователя.
 type UserResponse struct {
-	ID        string    `json:"id"        example:"7c0a..."`
-	Email     string    `json:"email"     example:"ivanov@uni.edu"`
-	FullName  string    `json:"full_name" example:"Иван Иванов"`
-	Role      string    `json:"role"      example:"student"`
-	GroupID   *string   `json:"group_id,omitempty"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID         string    `json:"id"        example:"7c0a..."`
+	Email      string    `json:"email"     example:"ivanov@uni.edu"`
+	FullName   string    `json:"full_name" example:"Иван Иванов"`
+	Department *string   `json:"department,omitempty"`
+	Role       string    `json:"role"      example:"student"`
+	GroupID    *string   `json:"group_id,omitempty"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 // AuthResponse — ответ на login/register/refresh.

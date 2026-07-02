@@ -31,6 +31,7 @@ import (
 
 	"github.com/student-pm/groups-service/internal/config"
 	httpdelivery "github.com/student-pm/groups-service/internal/delivery/http"
+	"github.com/student-pm/groups-service/internal/pkg/authclient"
 	jwtpkg "github.com/student-pm/groups-service/internal/pkg/jwt"
 	"github.com/student-pm/groups-service/internal/pkg/logger"
 	"github.com/student-pm/groups-service/internal/pkg/validator"
@@ -77,16 +78,29 @@ func run() error {
 	}
 	svc := usecase.NewGroupService(repo, time.Now)
 	v := validator.New()
-	h := httpdelivery.NewHandler(svc, v)
+	authClient := authclient.New(cfg.AuthServiceURL)
+	h := httpdelivery.NewHandler(svc, v, authClient)
 
 	app := fiber.New(fiber.Config{
 		AppName:      cfg.App.Name,
 		ReadTimeout:  cfg.HTTP.ReadTimeout,
 		WriteTimeout: cfg.HTTP.WriteTimeout,
+		BodyLimit:    1 * 1024 * 1024,
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
-			log.Error().Err(err).Str("path", c.Path()).Msg("unhandled error")
-			return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
-				"error": fiber.Map{"code": "internal_error", "message": "internal server error"},
+			code := http.StatusInternalServerError
+			msg := "internal server error"
+			var fe *fiber.Error
+			if errors.As(err, &fe) {
+				code = fe.Code
+				msg = fe.Message
+			}
+			if code >= http.StatusInternalServerError {
+				log.Error().Err(err).Str("path", c.Path()).Msg("unhandled error")
+			} else {
+				log.Warn().Err(err).Str("path", c.Path()).Int("status", code).Msg("request error")
+			}
+			return c.Status(code).JSON(fiber.Map{
+				"error": fiber.Map{"code": httpErrCode(code), "message": msg},
 			})
 		},
 	})
@@ -137,4 +151,32 @@ func runMigrations(dsn, dir string) error {
 		return err
 	}
 	return nil
+}
+
+// httpErrCode переводит HTTP-статус в короткий машиночитаемый код ошибки.
+// Используется как fallback, когда конкретный доменный код неизвестен —
+// например, для ошибок самого фреймворка (404 на несуществующий маршрут,
+// 405 на неподдерживаемый метод, 413 при превышении BodyLimit).
+func httpErrCode(status int) string {
+	switch status {
+	case http.StatusNotFound:
+		return "not_found"
+	case http.StatusMethodNotAllowed:
+		return "method_not_allowed"
+	case http.StatusRequestEntityTooLarge:
+		return "payload_too_large"
+	case http.StatusUnauthorized:
+		return "unauthorized"
+	case http.StatusForbidden:
+		return "forbidden"
+	case http.StatusBadRequest:
+		return "bad_request"
+	case http.StatusTooManyRequests:
+		return "rate_limited"
+	default:
+		if status >= 500 {
+			return "internal_error"
+		}
+		return "error"
+	}
 }

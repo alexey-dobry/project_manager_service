@@ -286,6 +286,12 @@ func TestFullProjectFlow(t *testing.T) {
 	var p httpdelivery.ProjectResponse
 	require.NoError(t, json.Unmarshal(body, &p))
 	require.Equal(t, "draft", p.Status)
+	// Регрессия на баг "e.tasksCount is undefined": свежесозданный проект
+	// обязан вернуть нулевой, но присутствующий tasks_count, и name как
+	// алиас title.
+	require.Equal(t, "Курсовая", p.Name)
+	require.Equal(t, 0, p.TasksCount.Total)
+	require.Equal(t, 0, p.Progress)
 
 	// 2) создание задачи
 	resp, body = doJSON(t, app, http.MethodPost, "/projects/"+p.ID+"/tasks", ownerToken, map[string]any{
@@ -295,6 +301,14 @@ func TestFullProjectFlow(t *testing.T) {
 	var task httpdelivery.TaskResponse
 	require.NoError(t, json.Unmarshal(body, &task))
 	require.Equal(t, "todo", task.Status)
+
+	// 2а) GET /projects/{id} отражает созданную задачу в tasks_count.
+	resp, body = doJSON(t, app, http.MethodGet, "/projects/"+p.ID, ownerToken, nil)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	var pAfterTask httpdelivery.ProjectResponse
+	require.NoError(t, json.Unmarshal(body, &pAfterTask))
+	require.Equal(t, 1, pAfterTask.TasksCount.Total)
+	require.Equal(t, 1, pAfterTask.TasksCount.Todo)
 
 	// 3) перевод задачи в in_progress
 	resp, _ = doJSON(t, app, http.MethodPatch, "/projects/"+p.ID+"/tasks/"+task.ID, ownerToken, map[string]any{
@@ -327,6 +341,17 @@ func TestFullProjectFlow(t *testing.T) {
 	var comments []httpdelivery.CommentResponse
 	require.NoError(t, json.Unmarshal(body, &comments))
 	require.Len(t, comments, 1)
+
+	// 7а) GET /projects/{id}/tasks — регрессия на баг "r is not iterable":
+	// ответ обязан быть голым JSON-массивом, а не {"items": [...]}.
+	resp, body = doJSON(t, app, http.MethodGet, "/projects/"+p.ID+"/tasks", ownerToken, nil)
+	require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+	require.True(t, bytes.HasPrefix(bytes.TrimSpace(body), []byte("[")),
+		"ответ должен начинаться с '[' — голый массив, не обёрнутый объект")
+	var boardTasks []httpdelivery.TaskResponse
+	require.NoError(t, json.Unmarshal(body, &boardTasks))
+	require.Len(t, boardTasks, 1)
+	require.Equal(t, "blocked", boardTasks[0].Status)
 
 	// 8) stats
 	resp, body = doJSON(t, app, http.MethodGet, "/projects/"+p.ID+"/stats", ownerToken, nil)
@@ -375,4 +400,52 @@ func TestHealth(t *testing.T) {
 	app := buildApp(t)
 	resp, _ := doJSON(t, app, http.MethodGet, "/health", "", nil)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+// TestTasks_FlatRoutes покрывает плоские алиасы /tasks/* (без project_id
+// в пути) — их используют клиенты, которым удобнее REST-ресурс /tasks.
+func TestTasks_FlatRoutes(t *testing.T) {
+	app := buildApp(t)
+	owner := uuid.New()
+	ownerToken := issueAccessToken(t, owner, domain.RoleStudent)
+
+	resp, body := doJSON(t, app, http.MethodPost, "/projects", ownerToken, map[string]any{
+		"title": "Flat", "group_id": uuid.NewString(),
+	})
+	require.Equal(t, http.StatusCreated, resp.StatusCode, string(body))
+	var p httpdelivery.ProjectResponse
+	require.NoError(t, json.Unmarshal(body, &p))
+
+	// POST /tasks с project_id в теле.
+	resp, body = doJSON(t, app, http.MethodPost, "/tasks", ownerToken, map[string]any{
+		"title": "Плоская задача", "priority": "medium", "project_id": p.ID,
+	})
+	require.Equal(t, http.StatusCreated, resp.StatusCode, string(body))
+	var task httpdelivery.TaskResponse
+	require.NoError(t, json.Unmarshal(body, &task))
+	require.Equal(t, "todo", task.Status)
+
+	// GET /tasks/{id} без project_id в пути.
+	resp, body = doJSON(t, app, http.MethodGet, "/tasks/"+task.ID, ownerToken, nil)
+	require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+
+	// PATCH /tasks/{id} без project_id в пути.
+	resp, body = doJSON(t, app, http.MethodPatch, "/tasks/"+task.ID, ownerToken, map[string]any{
+		"status": "in_progress",
+	})
+	require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+
+	// POST /tasks/move — то, что дёргает drag-and-drop на Kanban-доске.
+	resp, body = doJSON(t, app, http.MethodPost, "/tasks/move", ownerToken, map[string]any{
+		"task_id": task.ID, "new_status": "done", "new_order": 0,
+	})
+	// in_progress -> done: обязан быть разрешён по state machine.
+	require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+	var moved httpdelivery.TaskResponse
+	require.NoError(t, json.Unmarshal(body, &moved))
+	require.Equal(t, "done", moved.Status)
+
+	// DELETE /tasks/{id} без project_id в пути.
+	resp, _ = doJSON(t, app, http.MethodDelete, "/tasks/"+task.ID, ownerToken, nil)
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
 }

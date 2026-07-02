@@ -31,6 +31,7 @@ type User struct {
 	Email        string     `json:"email"`
 	PasswordHash string     `json:"-"` // не сериализуется в JSON
 	FullName     string     `json:"full_name"`
+	Department   *string    `json:"department,omitempty"`
 	Role         Role       `json:"role"`
 	GroupID      *uuid.UUID `json:"group_id,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`

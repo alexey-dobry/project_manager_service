@@ -42,14 +42,15 @@ type CreateTaskInput struct {
 }
 
 type UpdateTaskInput struct {
-	Title       *string
-	Description *string
-	AssigneeID  *uuid.UUID
+	Title         *string
+	Description   *string
+	AssigneeID    *uuid.UUID
 	ClearAssignee bool
-	Priority    *domain.TaskPriority
-	Status      *domain.TaskStatus
-	DueDate     *time.Time
-	ClearDueDate bool
+	Priority      *domain.TaskPriority
+	Status        *domain.TaskStatus
+	Order         *int
+	DueDate       *time.Time
+	ClearDueDate  bool
 }
 
 // ===== comments =====

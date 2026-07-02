@@ -18,6 +18,7 @@ import (
 
 	"github.com/student-pm/groups-service/internal/domain"
 	httpdelivery "github.com/student-pm/groups-service/internal/delivery/http"
+	"github.com/student-pm/groups-service/internal/pkg/authclient"
 	jwtpkg "github.com/student-pm/groups-service/internal/pkg/jwt"
 	"github.com/student-pm/groups-service/internal/pkg/validator"
 	"github.com/student-pm/groups-service/internal/usecase"
@@ -162,6 +163,24 @@ func (m *memRepo) GetMember(_ context.Context, gID, uID uuid.UUID) (*domain.Memb
 }
 
 
+// fakeAuthService — минимальная имитация GET /users/{id} auth-service.
+// Отдаёт детерминированное ФИО/роль по UUID, чтобы проверить обогащение
+// ответа GET /groups/{id} в groups-service.
+func fakeAuthService(t *testing.T) *httptest.Server {
+	t.Helper()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/users/", func(w http.ResponseWriter, r *http.Request) {
+		id := r.URL.Path[len("/users/"):]
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"id":        id,
+			"full_name": "Test User " + id[:8],
+			"role":      "student",
+		})
+	})
+	return httptest.NewServer(mux)
+}
+
 func buildApp(t *testing.T) *fiber.App {
 	t.Helper()
 	repo := newMemRepo()
@@ -169,7 +188,12 @@ func buildApp(t *testing.T) *fiber.App {
 	ver, err := jwtpkg.New(testSecret)
 	require.NoError(t, err)
 	v := validator.New()
-	hh := httpdelivery.NewHandler(svc, v)
+
+	authSrv := fakeAuthService(t)
+	t.Cleanup(authSrv.Close)
+	authClient := authclient.New(authSrv.URL)
+
+	hh := httpdelivery.NewHandler(svc, v, authClient)
 
 	app := fiber.New()
 	app.Use(httpdelivery.RequestID())
@@ -243,6 +267,16 @@ func TestGroupsFlow_AdminCreatesAndManages(t *testing.T) {
 	require.NoError(t, json.Unmarshal(body, &members))
 	require.Len(t, members, 2)
 
+	// 5а) GET /groups/{id} возвращает leader и members, обогащённые данными
+	// из (фейкового) auth-service — регрессия на баг "r.members undefined".
+	resp, body = doJSON(t, app, http.MethodGet, "/groups/"+g.ID, adminToken, nil)
+	require.Equal(t, http.StatusOK, resp.StatusCode, string(body))
+	var full httpdelivery.GroupWithMembersResponse
+	require.NoError(t, json.Unmarshal(body, &full))
+	require.NotNil(t, full.Leader)
+	require.NotEmpty(t, full.Leader.FullName)
+	require.Len(t, full.Members, 2)
+
 	// 6) студент сам выходит из группы
 	resp, _ = doJSON(t, app, http.MethodDelete, "/groups/"+g.ID+"/members/"+studentID.String(), studentToken, nil)
 	require.Equal(t, http.StatusNoContent, resp.StatusCode)
@@ -272,4 +306,30 @@ func TestHealth(t *testing.T) {
 	app := buildApp(t)
 	resp, _ := doJSON(t, app, http.MethodGet, "/health", "", nil)
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+// TestAddMember_DefaultsRoleToMember — регрессия под фронтовый вызов
+// groupsApi.addMember, который шлёт только { user_id }, без role_in_group.
+func TestAddMember_DefaultsRoleToMember(t *testing.T) {
+	app := buildApp(t)
+	admin := uuid.New()
+	adminToken := issueAccessToken(t, admin, domain.RoleAdmin)
+	leaderID := uuid.New()
+	studentID := uuid.New()
+
+	resp, body := doJSON(t, app, http.MethodPost, "/groups", adminToken, map[string]any{
+		"name": "БПИ-212", "course": 2, "faculty": "ФИТ", "leader_id": leaderID.String(),
+	})
+	require.Equal(t, http.StatusCreated, resp.StatusCode, string(body))
+	var g httpdelivery.GroupResponse
+	require.NoError(t, json.Unmarshal(body, &g))
+
+	// Ровно та форма запроса, что шлёт фронт: только user_id.
+	resp, body = doJSON(t, app, http.MethodPost, "/groups/"+g.ID+"/members", adminToken, map[string]any{
+		"user_id": studentID.String(),
+	})
+	require.Equal(t, http.StatusCreated, resp.StatusCode, string(body))
+	var m httpdelivery.MembershipResponse
+	require.NoError(t, json.Unmarshal(body, &m))
+	require.Equal(t, "member", m.RoleInGroup)
 }

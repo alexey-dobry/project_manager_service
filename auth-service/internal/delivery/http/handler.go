@@ -1,6 +1,8 @@
 package httpdelivery
 
 import (
+	"errors"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
@@ -164,6 +166,33 @@ func (h *Handler) GetUserByID(c *fiber.Ctx) error {
 	return c.JSON(toUserResponse(u))
 }
 
+// SearchUsersByEmail godoc
+// @Summary      Найти пользователей по email
+// @Description  Точное совпадение по email. Используется, например, при
+// @Description  добавлении участника в группу: находят пользователя по
+// @Description  почте, дальше вызывают POST /groups/{id}/members с его ID.
+// @Tags         users
+// @Produce      json
+// @Security     BearerAuth
+// @Param        email query string true "Email пользователя"
+// @Success      200 {array} UserResponse
+// @Router       /users/search [get]
+func (h *Handler) SearchUsersByEmail(c *fiber.Ctx) error {
+	email := c.Query("email")
+	if email == "" {
+		return httperr.Send(c, fiber.StatusBadRequest, "email_required", "email query param is required", nil)
+	}
+	u, err := h.auth.FindByEmail(c.UserContext(), email)
+	if err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			// Пустой результат — это не ошибка поиска, а "ничего не нашли".
+			return c.JSON([]UserResponse{})
+		}
+		return httperr.FromDomain(c, err)
+	}
+	return c.JSON([]UserResponse{toUserResponse(u)})
+}
+
 // UpdateUser godoc
 // @Summary      Обновление пользователя (PATCH)
 // @Description  Менять role может только admin. Обычный пользователь может править только себя.
@@ -181,6 +210,29 @@ func (h *Handler) UpdateUser(c *fiber.Ctx) error {
 	if err != nil {
 		return httperr.Send(c, fiber.StatusBadRequest, "invalid_id", "id must be UUID", nil)
 	}
+	return h.applyUserUpdate(c, targetID)
+}
+
+// UpdateMe godoc
+// @Summary      Обновление собственного профиля
+// @Description  Роль сменить нельзя — только admin через /users/{id}.
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body body UpdateUserRequest true "Поля для обновления"
+// @Success      200 {object} UserResponse
+// @Router       /auth/me [patch]
+func (h *Handler) UpdateMe(c *fiber.Ctx) error {
+	currentID, ok := userIDFrom(c)
+	if !ok {
+		return httperr.FromDomain(c, domain.ErrInvalidToken)
+	}
+	return h.applyUserUpdate(c, currentID)
+}
+
+// applyUserUpdate — общая логика для UpdateUser и UpdateMe.
+func (h *Handler) applyUserUpdate(c *fiber.Ctx, targetID uuid.UUID) error {
 	currentID, _ := userIDFrom(c)
 	currentRole, _ := roleFrom(c)
 
@@ -201,7 +253,7 @@ func (h *Handler) UpdateUser(c *fiber.Ctx) error {
 		return httperr.FromDomain(c, domain.ErrForbidden)
 	}
 
-	in := usecase.UpdateUserInput{FullName: req.FullName}
+	in := usecase.UpdateUserInput{FullName: req.FullName, Department: req.Department}
 	if req.GroupID != nil {
 		gid, err := uuid.Parse(*req.GroupID)
 		if err != nil {
@@ -219,6 +271,37 @@ func (h *Handler) UpdateUser(c *fiber.Ctx) error {
 		return httperr.FromDomain(c, err)
 	}
 	return c.JSON(toUserResponse(u))
+}
+
+// ChangePassword godoc
+// @Summary      Смена пароля текущего пользователя
+// @Description  Требует текущий пароль. Ревокирует все refresh-токены пользователя.
+// @Tags         users
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body body ChangePasswordRequest true "Текущий и новый пароль"
+// @Success      200 {object} MessageResponse
+// @Failure      401 {object} httperr.Body
+// @Router       /auth/change-password [post]
+func (h *Handler) ChangePassword(c *fiber.Ctx) error {
+	currentID, ok := userIDFrom(c)
+	if !ok {
+		return httperr.FromDomain(c, domain.ErrInvalidToken)
+	}
+
+	var req ChangePasswordRequest
+	if err := c.BodyParser(&req); err != nil {
+		return httperr.Send(c, fiber.StatusBadRequest, "bad_request", "invalid JSON body", nil)
+	}
+	if details, err := h.validator.Validate(req); err != nil {
+		return httperr.Send(c, fiber.StatusBadRequest, "validation_failed", "validation failed", details)
+	}
+
+	if err := h.auth.ChangePassword(c.UserContext(), currentID, req.CurrentPassword, req.NewPassword); err != nil {
+		return httperr.FromDomain(c, err)
+	}
+	return c.JSON(MessageResponse{Message: "password changed"})
 }
 
 // Health godoc
@@ -245,12 +328,13 @@ func (h *Handler) Ready(c *fiber.Ctx) error {
 
 func toUserResponse(u *domain.User) UserResponse {
 	r := UserResponse{
-		ID:        u.ID.String(),
-		Email:     u.Email,
-		FullName:  u.FullName,
-		Role:      string(u.Role),
-		CreatedAt: u.CreatedAt,
-		UpdatedAt: u.UpdatedAt,
+		ID:         u.ID.String(),
+		Email:      u.Email,
+		FullName:   u.FullName,
+		Department: u.Department,
+		Role:       string(u.Role),
+		CreatedAt:  u.CreatedAt,
+		UpdatedAt:  u.UpdatedAt,
 	}
 	if u.GroupID != nil {
 		s := u.GroupID.String()

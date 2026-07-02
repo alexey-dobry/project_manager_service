@@ -29,11 +29,11 @@ func NewPostgresRepo(pool *pgxpool.Pool) *PostgresRepo {
 
 func (r *PostgresRepo) Create(ctx context.Context, u *domain.User) error {
 	const q = `
-		INSERT INTO users (id, email, password_hash, full_name, role, group_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO users (id, email, password_hash, full_name, department, role, group_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 	_, err := r.pool.Exec(ctx, q,
-		u.ID, u.Email, u.PasswordHash, u.FullName, u.Role, u.GroupID, u.CreatedAt, u.UpdatedAt,
+		u.ID, u.Email, u.PasswordHash, u.FullName, u.Department, u.Role, u.GroupID, u.CreatedAt, u.UpdatedAt,
 	)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -47,7 +47,7 @@ func (r *PostgresRepo) Create(ctx context.Context, u *domain.User) error {
 
 func (r *PostgresRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	const q = `
-		SELECT id, email, password_hash, full_name, role, group_id, created_at, updated_at
+		SELECT id, email, password_hash, full_name, department, role, group_id, created_at, updated_at
 		FROM users WHERE id = $1
 	`
 	return r.scanUser(r.pool.QueryRow(ctx, q, id))
@@ -55,7 +55,7 @@ func (r *PostgresRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.User,
 
 func (r *PostgresRepo) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
 	const q = `
-		SELECT id, email, password_hash, full_name, role, group_id, created_at, updated_at
+		SELECT id, email, password_hash, full_name, department, role, group_id, created_at, updated_at
 		FROM users WHERE email = $1
 	`
 	return r.scanUser(r.pool.QueryRow(ctx, q, email))
@@ -64,10 +64,10 @@ func (r *PostgresRepo) GetByEmail(ctx context.Context, email string) (*domain.Us
 func (r *PostgresRepo) Update(ctx context.Context, u *domain.User) error {
 	const q = `
 		UPDATE users
-		SET full_name = $1, role = $2, group_id = $3, updated_at = $4
-		WHERE id = $5
+		SET full_name = $1, department = $2, role = $3, group_id = $4, password_hash = $5, updated_at = $6
+		WHERE id = $7
 	`
-	tag, err := r.pool.Exec(ctx, q, u.FullName, u.Role, u.GroupID, u.UpdatedAt, u.ID)
+	tag, err := r.pool.Exec(ctx, q, u.FullName, u.Department, u.Role, u.GroupID, u.PasswordHash, u.UpdatedAt, u.ID)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func (r *PostgresRepo) Update(ctx context.Context, u *domain.User) error {
 func (r *PostgresRepo) scanUser(row pgx.Row) (*domain.User, error) {
 	u := &domain.User{}
 	err := row.Scan(
-		&u.ID, &u.Email, &u.PasswordHash, &u.FullName, &u.Role, &u.GroupID, &u.CreatedAt, &u.UpdatedAt,
+		&u.ID, &u.Email, &u.PasswordHash, &u.FullName, &u.Department, &u.Role, &u.GroupID, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

@@ -30,7 +30,7 @@ func RegisterRoutes(app *fiber.App, ups Upstreams, v *jwt.Verifier, swagger fibe
 
 	authMW := AuthRequired(v)
 
-	app.All("/auth/logout", authMW, ups.Auth.Handler())
+	app.All("/auth/*", authMW, ups.Auth.Handler())
 	app.All("/users", authMW, ups.Auth.Handler())
 	app.All("/users/*", authMW, ups.Auth.Handler())
 
