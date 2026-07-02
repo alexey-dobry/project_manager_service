@@ -1,0 +1,16 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Установка зависимостей через монтирование package.json
+COPY package.json package-lock.json* ./
+RUN npm ci --no-audit --prefer-offline
+
+# Исходники монтируются через volume в docker-compose.dev.yml
+COPY . .
+
+EXPOSE 5173
+
+# Vite в режиме разработки с HMR.
+# host=0.0.0.0 обязателен, иначе порт не пробросится из контейнера.
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

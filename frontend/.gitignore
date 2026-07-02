@@ -1,0 +1,33 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build artifacts
+dist
+build
+*.tsbuildinfo
+
+# Coverage / tests
+coverage
+.nyc_output
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editors
+.vscode/*
+!.vscode/launch.json
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea
+.DS_Store
+
+# Env (но example и шаблоны коммитим)
+.env
+.env.local
+*.env.local
+
+# Misc
+.eslintcache

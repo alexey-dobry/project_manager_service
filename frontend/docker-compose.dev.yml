@@ -1,0 +1,30 @@
+version: '3.9'
+
+services:
+  frontend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: studentpm-frontend-dev
+    ports:
+      - '5173:5173'
+    volumes:
+      # Монтируем исходники для hot-reload
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./index.html:/app/index.html
+      - ./vite.config.ts:/app/vite.config.ts
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./tailwind.config.js:/app/tailwind.config.js
+      - ./postcss.config.js:/app/postcss.config.js
+      # node_modules оставляем в контейнере (не перетираем хостовыми)
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true # для надёжного watch в Docker
+    networks:
+      - studentpm-network
+
+networks:
+  studentpm-network:
+    driver: bridge
